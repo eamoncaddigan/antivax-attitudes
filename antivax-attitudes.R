@@ -4,6 +4,9 @@ library(tidyr)
 library(dplyr)
 library(ggplot2)
 
+
+# Gather and clean the data -----------------------------------------------
+
 # Generates warnings, but only for the Ps who didn't do day 2
 expData <- read_excel("Vacc_HPHH_publicDataset.xlsx", sheet = 2)
 
@@ -22,28 +25,38 @@ questionnaireData <- expData.clean %>%
   # pull out the columns and use BETTER NAMES (jeez Zach)
   select(subject_number,
          intervention = Condition,
-         pretest_healthy = Healthy_VaxscalePretest,
-         posttest_healthy = Healthy_VaxscalePosttest,
-         pretest_diseases = Diseases_VaxScalePretest,
-         posttest_diseases = Diseases_VaxScalePosttest,
-         pretest_doctors = Doctors_VaxScalePreTest,
-         posttest_doctors = Doctors_VaxScalePostTest,
-         pretest_sideeffects = Sideeffects_VaxScalePreTest,
-         posttest_sideeffects = Sideeffects_VaxScalePostTest,
-         pretest_planto = Planto_VaxScalePreTest,
-         posttest_planto = Planto_VaxScalePostTest,
-         pretest_autism = Autism_PreTest,
-         posttest_autism = AutismAttitude_PostTest) %>%
+         pretest.healthy = Healthy_VaxscalePretest,
+         posttest.healthy = Healthy_VaxscalePosttest,
+         pretest.diseases = Diseases_VaxScalePretest,
+         posttest.diseases = Diseases_VaxScalePosttest,
+         pretest.doctors = Doctors_VaxScalePreTest,
+         posttest.doctors = Doctors_VaxScalePostTest,
+         pretest.side_effects = Sideeffects_VaxScalePreTest,
+         posttest.side_effects = Sideeffects_VaxScalePostTest,
+         pretest.plan_to = Planto_VaxScalePreTest,
+         posttest.plan_to = Planto_VaxScalePostTest,
+         pretest.autism = Autism_PreTest,
+         posttest.autism = AutismAttitude_PostTest) %>%
   # reverse-code the approrpiate columns
-  mutate(pretest_diseases = 7 - pretest_diseases,
-         posttest_diseases = 7 - posttest_diseases,
-         pretest_sideeffects = 7 - pretest_sideeffects,
-         posttest_sideeffects = 7 - posttest_sideeffects) %>%
+  mutate(pretest.diseases = 7 - pretest.diseases,
+         posttest.diseases = 7 - posttest.diseases,
+         pretest.side_effects = 7 - pretest.side_effects,
+         posttest.side_effects = 7 - posttest.side_effects) %>%
   # "tidy" the data
   gather("question", "response", -subject_number, -intervention) %>%
-  separate(question, c("interval", "question"))
+  separate(question, c("interval", "question"), sep = "\\.") %>% 
+  mutate(interval = factor(interval, c("pretest", "posttest"), ordered = TRUE))
 
-# Let's take a look at the data
-ggplot(questionnaireData, aes(x = question, y = response, fill = interval)) +
+
+# Some plots --------------------------------------------------------------
+
+p1 <- ggplot(questionnaireData, aes(x = question, y = response, fill = interval)) +
   geom_violin() + 
   facet_grid(intervention ~ .)
+print(p1)
+
+p2 <- ggplot(questionnaireData, aes(x = interval, y = response, group = subject_number)) + 
+  geom_line(alpha = 0.2, position = position_jitter(w = 0.15, h = 0.15)) + 
+  facet_grid(intervention ~ question)
+print(p2)
+
