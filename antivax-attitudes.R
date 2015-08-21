@@ -43,16 +43,19 @@ questionnaireData <- expData.clean %>%
   # "tidy" the data
   gather("question", "response", -subject_number, -intervention) %>%
   separate(question, c("interval", "question"), sep = "\\.") %>% 
-  mutate(interval = factor(interval, c("pretest", "posttest"), ordered = TRUE))
+  mutate(interval = factor(interval, c("pretest", "posttest"), ordered = TRUE),
+         question = factor(question))
 
 
 # Some plots --------------------------------------------------------------
 
+# Check out the distribution of responses before and after the intervention
 p1 <- ggplot(questionnaireData, aes(x = question, y = response, fill = interval)) +
   geom_violin() + 
   facet_grid(intervention ~ .)
 print(p1)
 
+# Look at each subject's change for each question
 p2 <- ggplot(questionnaireData, aes(x = interval, y = response, group = subject_number)) + 
   geom_line(alpha = 0.2, position = position_jitter(w = 0.15, h = 0.15)) + 
   facet_grid(intervention ~ question)
@@ -61,7 +64,7 @@ print(p2)
 
 # Bayesian analysis of survey data ----------------------------------------
 
-# For now, we'll just fit one model to all the questions pre-test. 
+# Fit a model to each question using pre-intervention data. 
 modelData <- filter(questionnaireData, interval == "pretest")
 
 source("Jags-Yord-Xnom1grp-Mnormal.R")

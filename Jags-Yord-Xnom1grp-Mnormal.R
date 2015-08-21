@@ -72,17 +72,7 @@ genMCMC = function( datFrm, yName , qName,
   # Write out modelString to a text file
   writeLines( modelString , con="TEMPmodel.txt" )
   #-----------------------------------------------------------------------------
-  # INTIALIZE THE CHAINS.
-  #   # Initial values of MCMC chains based on data:
-  #   muInit = c( mean(y[x==1]) , mean(y[x==2]) )
-  #   sigmaInit = c( sd(y[x==1]) , sd(y[x==2]) )
-  #   threshInit = 1:(nYlevels-1)+0.5
-  #   threshInit[1] = NA
-  #   threshInit[nYlevels-1] = NA
-  #   # Regarding initial values in next line: (1) sigma will tend to be too big if 
-  #   # the data have outliers, and (2) nu starts at 5 as a moderate value. These
-  #   # initial values keep the burn-in period moderate.
-  #   initsList = list( mu=muInit, sigma=sigmaInit, nuMinusOne=4, thresh=threshInit )
+  # This is where the chains would be initialized, but we'll just let JAGS do it
   initsList = NULL
   #-----------------------------------------------------------------------------
   # RUN THE CHAINS
@@ -181,6 +171,7 @@ plotMCMC = function( codaSamples , datFrm , yName , qName, compVal , #RopeEff=NU
                          xlab=bquote(sigma) , 
                          main=paste("Std. Dev.") , 
                          col="skyblue"  )
+    
     #-----------------------------------------------------------------------------
     # 4. effect size. 
     effectSize = ( mu - compVal ) / sigma
