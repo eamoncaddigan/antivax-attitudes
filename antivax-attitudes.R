@@ -58,3 +58,36 @@ p2 <- ggplot(questionnaireData, aes(x = interval, y = response, group = subject_
   facet_grid(intervention ~ question)
 print(p2)
 
+
+# Bayesian analysis of survey data ----------------------------------------
+
+# For now, we'll just fit one model to all the questions pre-test. 
+modelData <- filter(questionnaireData, interval == "pretest")
+
+source("Jags-Yord-Xnom1grp-Mnormal.R")
+fileNameRoot = "antivax-mcmc"
+
+mcmcCoda <- genMCMC(datFrm = modelData,
+                    yName = "response",
+                    numSavedSteps = 15000,
+                    thinSteps = 10,
+                    saveName = fileNameRoot)
+
+# Display diagnostics of chain, for specified parameters:
+# (everything)
+parameterNames = varnames(mcmcCoda) 
+for (parName in parameterNames) {
+  diagMCMC(codaObject = mcmcCoda,
+           parName = parName, 
+           saveName = fileNameRoot,
+           saveType = "eps")
+}
+
+# Display posterior information:
+plotMCMC(mcmcCoda,
+         datFrm = modelData,
+         yName = "response",
+         compVal = 3.5, 
+         pairsPlot = TRUE,
+         saveName = fileNameRoot,
+         saveType = "eps")
