@@ -226,9 +226,9 @@ plotMCMC = function( codaSamples , datFrm , yName , qName, compVal , #RopeEff=NU
     plot( mcmcMat[plotIdx,threshCols[1]] , threshMean[plotIdx] , col="skyblue" ,
           xlim=xLim , xlab="Threshold" , ylab="Mean Threshold" )
     abline(v=mean(mcmcMat[plotIdx,threshCols[1]]),lty="dashed",col="skyblue")
-    for ( i in 2:length(threshCols) ) {
-      points( mcmcMat[plotIdx,threshCols[i]] , threshMean[plotIdx] , col="skyblue" )
-      abline(v=mean(mcmcMat[plotIdx,threshCols[i]]),lty="dashed",col="skyblue")
+    for ( jj in 2:length(threshCols) ) {
+      points( mcmcMat[plotIdx,threshCols[jj]] , threshMean[plotIdx] , col="skyblue" )
+      abline(v=mean(mcmcMat[plotIdx,threshCols[jj]]),lty="dashed",col="skyblue")
     }
     #-----------------------------------------------------------------------------
     if ( !is.null(saveName) ) {
