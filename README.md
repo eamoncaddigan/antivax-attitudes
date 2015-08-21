@@ -3,4 +3,4 @@ Data from Horne, Powell, Hummel &amp; Holyoak (2015). doi: 10.1073/pnas.15040191
 
 ***
 
-Just thought I'd see if there was anything cool that they didn't publish. 
+Currently using Bayesian Estimation and a hierarchical model of all output measures in a manner that avoids the need to correct for multiple comparisons.
