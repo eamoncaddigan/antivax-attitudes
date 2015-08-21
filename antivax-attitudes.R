@@ -34,9 +34,7 @@ questionnaireData <- expData.clean %>%
          pretest.side_effects = Sideeffects_VaxScalePreTest,
          posttest.side_effects = Sideeffects_VaxScalePostTest,
          pretest.plan_to = Planto_VaxScalePreTest,
-         posttest.plan_to = Planto_VaxScalePostTest,
-         pretest.autism = Autism_PreTest,
-         posttest.autism = AutismAttitude_PostTest) %>%
+         posttest.plan_to = Planto_VaxScalePostTest) %>%
   # reverse-code the approrpiate columns
   mutate(pretest.diseases = 7 - pretest.diseases,
          posttest.diseases = 7 - posttest.diseases,
