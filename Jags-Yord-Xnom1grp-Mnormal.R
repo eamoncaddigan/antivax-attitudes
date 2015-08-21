@@ -112,31 +112,6 @@ genMCMC = function( datFrm, yName , qName,
 
 #===============================================================================
 
-smryMCMC = function(  codaSamples , compVal , #RopeEff=NULL , 
-                      saveName=NULL ) {
-  summaryInfo = NULL
-  mcmcMat = as.matrix(codaSamples,chains=TRUE)
-  summaryInfo = rbind( summaryInfo , 
-                       "mu" = summarizePost( mcmcMat[,"mu"] ) )
-  summaryInfo = rbind( summaryInfo , 
-                       "sigma" = summarizePost( mcmcMat[,"sigma"] ) )
-  summaryInfo = rbind( summaryInfo , 
-                       "effSz" = summarizePost( 
-                         ( mcmcMat[,"mu"] - compVal ) / mcmcMat[,"sigma"] ,
-                         compVal=compVal , ROPE=NULL ) )
-  for ( colName in grep( "thresh" , colnames(mcmcMat) , value=TRUE ) ) {
-    summaryInfo = rbind( summaryInfo , 
-                         summarizePost( mcmcMat[,colName] ) )
-    rownames(summaryInfo)[nrow(summaryInfo)] = colName
-  }
-  if ( !is.null(saveName) ) {
-    write.csv( summaryInfo , file=paste(saveName,"SummaryInfo.csv",sep="") )
-  }
-  return( summaryInfo )
-}
-
-#===============================================================================
-
 plotMCMC = function( codaSamples , datFrm , yName , qName, compVal , #RopeEff=NULL ,
                      showCurve=FALSE , 
                      saveName=NULL , saveType="jpg" ) {
@@ -145,8 +120,6 @@ plotMCMC = function( codaSamples , datFrm , yName , qName, compVal , #RopeEff=NU
   chainLength = NROW( mcmcMat )
   q = as.numeric(as.factor(datFrm[[qName]]))
   nQlevels = max(q)
-  
-  
   
   #-----------------------------------------------------------------------------
   # Plots for each question
