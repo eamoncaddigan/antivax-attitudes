@@ -13,7 +13,7 @@ genMCMC = function( datFrm, yName , numSavedSteps=50000 , thinSteps = 1,
                     nChains=nChainsDefault ) { 
   #-----------------------------------------------------------------------------
   # THE DATA.
-  y = as.numeric(datFrm[,yName])
+  y = as.numeric(datFrm[[yName]])
   # Do some checking that data make sense:
   if ( any( y!=round(y) ) ) { stop("All y values must be integers (whole numbers).") }
   if ( any( y < 1 ) ) { stop("All y values must be 1 or larger.") }
@@ -180,7 +180,7 @@ plotMCMC = function( codaSamples , datFrm , yName , compVal , #RopeEff=NULL ,
   layout( matrix( c(1,2,3,4,5,6) , nrow=3, byrow=TRUE ) )
   par( mar=c(3.5,3.5,2.5,0.5) , mgp=c(2.25,0.7,0) )
   # Compute limits for plots of data with posterior pred. distributions
-  y = as.numeric(datFrm[,yName])
+  y = as.numeric(datFrm[[yName]])
   # COMPRESS OUT ANY EMPTY VALUES OF Y:
   yOrig=y
   y=as.numeric(factor(y,levels=names(table(y))))
