@@ -69,25 +69,27 @@ fileNameRoot = "antivax-mcmc"
 
 mcmcCoda <- genMCMC(datFrm = modelData,
                     yName = "response",
+                    qName = "question",
                     numSavedSteps = 15000,
                     thinSteps = 10,
                     saveName = fileNameRoot)
 
 # Display diagnostics of chain, for specified parameters:
 # (everything)
-parameterNames = varnames(mcmcCoda) 
+parameterNames <- varnames(mcmcCoda)
+parameterNames <- parameterNames[grepl("^mu", parameterNames) | grepl("^sigma", parameterNames)]
 for (parName in parameterNames) {
   diagMCMC(codaObject = mcmcCoda,
            parName = parName, 
            saveName = fileNameRoot,
-           saveType = "eps")
+           saveType = "png")
 }
 
 # Display posterior information:
 plotMCMC(mcmcCoda,
          datFrm = modelData,
          yName = "response",
+         qName = "question",
          compVal = 3.5, 
-         pairsPlot = TRUE,
          saveName = fileNameRoot,
-         saveType = "eps")
+         saveType = "png")
