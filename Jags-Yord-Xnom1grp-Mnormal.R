@@ -121,13 +121,13 @@ plotMCMC = function( codaSamples , datFrm , yName , qName, compVal , #RopeEff=NU
   #-----------------------------------------------------------------------------
   mcmcMat = as.matrix(codaSamples,chains=TRUE)
   chainLength = NROW( mcmcMat )
-  q = as.numeric(as.factor(datFrm[[qName]]))
-  nQlevels = max(q)
+  x1 = as.numeric(as.factor(datFrm[[qName]]))
+  Nx1Lvl = max(x1)
   
   #-----------------------------------------------------------------------------
   # Plots for each question
-  for (i in 1:nQlevels) {
-    mu = mcmcMat[, paste0("mu[", i, "]")]
+  for (i in 1:Nx1Lvl) {
+    mu = mcmcMat[, "b0"] + mcmcMat[, paste0("b1[", i, "]")]
     sigma = mcmcMat[, paste0("sigma[", i, "]")]
     
     # Set up window and layout:
@@ -136,7 +136,7 @@ plotMCMC = function( codaSamples , datFrm , yName , qName, compVal , #RopeEff=NU
     par( mar=c(3.5,3.5,2.5,0.5) , mgp=c(2.25,0.7,0) )
     
     # Compute limits for plots of data with posterior pred. distributions
-    y = datFrm[[yName]][q == i]
+    y = datFrm[[yName]][x1 == i]
     xLim = c( min(y)-0.5 , max(y)+0.5 )
     xBreaks = seq( xLim[1] , xLim[2] , 1 )  
     histInfo = hist(y,breaks=xBreaks,plot=FALSE)
@@ -207,7 +207,10 @@ plotMCMC = function( codaSamples , datFrm , yName , qName, compVal , #RopeEff=NU
       points( mcmcMat[plotIdx,threshCols[jj]] , threshMean[plotIdx] , col="skyblue" )
       abline(v=mean(mcmcMat[plotIdx,threshCols[jj]]),lty="dashed",col="skyblue")
     }
+    
     #-----------------------------------------------------------------------------
+    # 6. (Is blank)
+    
     if ( !is.null(saveName) ) {
       saveGraph( file=paste(saveName,"Q",i,"Post",sep=""), type=saveType)
     }

@@ -89,7 +89,6 @@ for (parName in parameterNames) {
 }
 
 # Display posterior information:
-# XXX - broken by model changes
 plotMCMC(mcmcCoda,
          datFrm = modelData,
          yName = "response",
