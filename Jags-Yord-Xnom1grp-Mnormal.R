@@ -36,10 +36,10 @@ genMCMC = function( datFrm, yName , qName,
   thresh[, nYlevels-1] = nYlevels-1 + 0.5
   # Specify the data in a list, for later shipment to JAGS:
   dataList = list(
-    q = q,
-    nQlevels = nQlevels,
+    x1 = q,
+    Nx1Lvl = nQlevels,
     y = y,
-    nYlevels = nYlevels,
+    NyLvl = nYlevels,
     thresh = thresh,
     Ntotal = Ntotal 
   )
@@ -48,24 +48,37 @@ genMCMC = function( datFrm, yName , qName,
   modelString = "
   model {
     for (i in 1:Ntotal) {
-      y[i] ~ dcat(pr[i,1:nYlevels])
-      pr[i,1] <- pnorm(thresh[q[i], 1] , mu[q[i]] , 1/sigma[q[i]]^2)
-      for (k in 2:(nYlevels-1)) {
-        pr[i,k] <- max( 0 ,  pnorm(thresh[q[i], k] ,   mu[q[i]] , 1/sigma[q[i]]^2 )
-                           - pnorm(thresh[q[i], k-1] , mu[q[i]] , 1/sigma[q[i]]^2 ))
+      y[i] ~ dcat(pr[i,1:NyLvl])
+      pr[i,1] <- pnorm(thresh[x1[i], 1] , mu[i] , 1/sigma[x1[i]]^2)
+      for (k in 2:(NyLvl-1)) {
+        pr[i,k] <- max( 0 ,  pnorm(thresh[x1[i], k] ,   mu[i] , 1/sigma[x1[i]]^2 )
+                           - pnorm(thresh[x1[i], k-1] , mu[i] , 1/sigma[x1[i]]^2 ))
       }
-      pr[i,nYlevels] <- 1 - pnorm(thresh[q[i], nYlevels-1] , mu[q[i]] , 1/sigma[q[i]]^2)
+      pr[i,NyLvl] <- 1 - pnorm(thresh[x1[i], NyLvl-1] , mu[i] , 1/sigma[x1[i]]^2)
+      mu[i] <- a0 + a1[x1[i]] 
     }
 
-    # Unique mu, sigma, and thresh vector for each question
-    for (j in 1:nQlevels) {
-      mu[j] ~ dnorm( (1+nYlevels)/2 , 1/(nYlevels)^2 )
-      sigma[j] ~ dunif( nYlevels/1000 , nYlevels*10 )
+    a0 ~ dnorm((1+NyLvl)/2, 1/(NyLvl)^2)
+    for (j in 1:Nx1Lvl) { 
+      # Constant sigma for beta1, we're treating all Qs as independent
+      a1[j] ~ dnorm(0.0 , 1/(NyLvl)^2)
 
-      # Threshold distributions. 1 and nYlevels-1 are fixed, not stochastic
-      for (k in 2:(nYlevels-2)) {  
+      # Sigma for normal CDF, unique for each Q.
+      sigma[j] ~ dunif(NyLvl/1000 , NyLvl*10)
+
+      # Threshold distributions. 1 and NyLvl-1 are fixed, not stochastic
+      for (k in 2:(NyLvl-2)) {  
         thresh[j, k] ~ dnorm( k+0.5 , 1/2^2 )
       }
+    }
+
+    # Convert a0,a[] to sum-to-zero b0,b[] :
+    for (j in 1:Nx1Lvl) {
+      m[j] <- a0 + a1[j] 
+    } 
+    b0 <- mean(m[1:Nx1Lvl])
+    for (j in 1:Nx1Lvl) { 
+      b1[j] <- m[j] - b0 
     }
   }
   " # close quote for modelString
@@ -76,7 +89,7 @@ genMCMC = function( datFrm, yName , qName,
   initsList = NULL
   #-----------------------------------------------------------------------------
   # RUN THE CHAINS
-  parameters = c( "mu" , "sigma" , "thresh" )
+  parameters = c("b0", "b1", "sigma", "thresh")
   adaptSteps = 500               # Number of steps to "tune" the samplers
   burnInSteps = 1000
   runJagsOut <- run.jags( method=runjagsMethod ,

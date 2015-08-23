@@ -78,9 +78,9 @@ mcmcCoda <- genMCMC(datFrm = modelData,
                     saveName = fileNameRoot)
 
 # Display diagnostics of chain, for specified parameters:
-# (everything)
+# betas, sigmas
 parameterNames <- varnames(mcmcCoda)
-parameterNames <- parameterNames[grepl("^mu", parameterNames) | grepl("^sigma", parameterNames)]
+parameterNames <- parameterNames[grepl("^b", parameterNames) | grepl("^sigma", parameterNames)]
 for (parName in parameterNames) {
   diagMCMC(codaObject = mcmcCoda,
            parName = parName, 
@@ -89,6 +89,7 @@ for (parName in parameterNames) {
 }
 
 # Display posterior information:
+# XXX - broken by model changes
 plotMCMC(mcmcCoda,
          datFrm = modelData,
          yName = "response",
