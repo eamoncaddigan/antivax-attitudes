@@ -7,7 +7,7 @@ source("DBDA2E-utilities.R")
 
 #===============================================================================
 
-genMCMC = function( datFrm, yName , qName,
+genMCMC = function( datFrm, yName , qName, sName,
                     numSavedSteps=50000 , thinSteps = 1,
                     saveName=NULL ,
                     runjagsMethod=runjagsMethodDefault , 
@@ -16,6 +16,9 @@ genMCMC = function( datFrm, yName , qName,
   # THE DATA.
   q = as.numeric(as.factor(datFrm[[qName]]))
   nQlevels = max(q)
+  
+  s = as.numeric(as.factor(datFrm[[sName]]))
+  nSlevels = max(s)
   
   y = as.numeric(datFrm[[yName]])
   # Do some checking that data make sense:
@@ -28,6 +31,9 @@ genMCMC = function( datFrm, yName , qName,
     warning("*** WARNING: Y RE-CODED TO REMOVE EMPTY LEVELS ***")
   }
   Ntotal = length(y)
+  # For hyper-prior on deflections:
+  agammaShRa = unlist(gammaShRaFromModeSD(mode=sd(y)/2 , sd=2*sd(y)))
+  
   # Threshold 1 and nYlevels-1 are fixed; other thresholds are estimated.
   # This allows all parameters to be interpretable on the response scale.
   nYlevels = max(y)  
@@ -38,16 +44,20 @@ genMCMC = function( datFrm, yName , qName,
   dataList = list(
     x1 = q,
     Nx1Lvl = nQlevels,
+    x2 = s,
+    Nx2Lvl = nSlevels,
     y = y,
     NyLvl = nYlevels,
     thresh = thresh,
-    Ntotal = Ntotal 
+    Ntotal = Ntotal,
+    agammaShRa = agammaShRa
   )
   #-----------------------------------------------------------------------------
   # THE MODEL.
   modelString = "
   model {
     for (i in 1:Ntotal) {
+      # Thresholded cummulative normal distribution
       y[i] ~ dcat(pr[i,1:NyLvl])
       pr[i,1] <- pnorm(thresh[x1[i], 1] , mu[i] , 1/sigma[x1[i]]^2)
       for (k in 2:(NyLvl-1)) {
@@ -55,30 +65,44 @@ genMCMC = function( datFrm, yName , qName,
                            - pnorm(thresh[x1[i], k-1] , mu[i] , 1/sigma[x1[i]]^2 ))
       }
       pr[i,NyLvl] <- 1 - pnorm(thresh[x1[i], NyLvl-1] , mu[i] , 1/sigma[x1[i]]^2)
-      mu[i] <- a0 + a1[x1[i]] 
+
+      # No subject/question interaction term
+      mu[i] <- a0 + a1[x1[i]] + a2[x2[i]]
     }
 
     a0 ~ dnorm((1+NyLvl)/2, 1/(NyLvl)^2)
-    for (j in 1:Nx1Lvl) { 
+
+    for (j1 in 1:Nx1Lvl) { 
       # Constant sigma for beta1, we're treating all Qs as independent
-      a1[j] ~ dnorm(0.0 , 1/(NyLvl)^2)
+      a1[j1] ~ dnorm(0.0, 1/(NyLvl)^2)
 
       # Sigma for normal CDF, unique for each Q.
-      sigma[j] ~ dunif(NyLvl/1000 , NyLvl*10)
+      sigma[j1] ~ dunif(NyLvl/1000, NyLvl*10)
 
       # Threshold distributions. 1 and NyLvl-1 are fixed, not stochastic
       for (k in 2:(NyLvl-2)) {  
-        thresh[j, k] ~ dnorm( k+0.5 , 1/2^2 )
+        thresh[j1, k] ~ dnorm(k+0.5, 1/2^2)
       }
     }
 
-    # Convert a0,a[] to sum-to-zero b0,b[] :
-    for (j in 1:Nx1Lvl) {
-      m[j] <- a0 + a1[j] 
+    # Estimating beta2 variance from the data
+    for (j2 in 1:Nx2Lvl) {
+      a2[j2] ~ dnorm(0.0, 1/a2SD^2)
+    }
+    a2SD ~ dgamma(agammaShRa[1], agammaShRa[2])
+
+    # Convert a0,a1[],a2[] to sum-to-zero b0,b1[],b2[]:
+    for (j1 in 1:Nx1Lvl) {
+      for (j2 in 1:Nx2Lvl) {
+        m[j1,j2] <- a0 + a1[j1] + a2[j2]
+      }
     } 
-    b0 <- mean(m[1:Nx1Lvl])
-    for (j in 1:Nx1Lvl) { 
-      b1[j] <- m[j] - b0 
+    b0 <- mean(m[1:Nx1Lvl,1:Nx2Lvl])
+    for (j1 in 1:Nx1Lvl) { 
+      b1[j1] <- mean(m[j1,1:Nx2Lvl]) - b0
+    }
+    for (j2 in 1:Nx2Lvl) { 
+      b2[j2] <- mean(m[1:Nx1Lvl,j2]) - b0
     }
   }
   " # close quote for modelString
@@ -89,7 +113,7 @@ genMCMC = function( datFrm, yName , qName,
   initsList = NULL
   #-----------------------------------------------------------------------------
   # RUN THE CHAINS
-  parameters = c("b0", "b1", "sigma", "thresh")
+  parameters = c("b0", "b1", "b2", "sigma", "thresh")
   adaptSteps = 500               # Number of steps to "tune" the samplers
   burnInSteps = 1000
   runJagsOut <- run.jags( method=runjagsMethod ,

@@ -73,6 +73,7 @@ fileNameRoot = "antivax-mcmc"
 mcmcCoda <- genMCMC(datFrm = modelData,
                     yName = "response",
                     qName = "question",
+                    sName = "subject_number",
                     numSavedSteps = 15000,
                     thinSteps = 10,
                     saveName = fileNameRoot)
