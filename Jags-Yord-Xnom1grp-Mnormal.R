@@ -7,18 +7,21 @@ source("DBDA2E-utilities.R")
 
 #===============================================================================
 
-genMCMC = function( datFrm, yName , qName, sName,
+genMCMC = function( datFrm, yName , x1Name, x2Name, x3Name,
                     numSavedSteps=50000 , thinSteps = 1,
                     saveName=NULL ,
                     runjagsMethod=runjagsMethodDefault , 
                     nChains=nChainsDefault ) { 
   #-----------------------------------------------------------------------------
   # THE DATA.
-  q = as.numeric(as.factor(datFrm[[qName]]))
-  nQlevels = max(q)
+  x1 = as.numeric(as.factor(datFrm[[x1Name]]))
+  Nx1Lvl = max(x1)
   
-  s = as.numeric(as.factor(datFrm[[sName]]))
-  nSlevels = max(s)
+  x2 = as.numeric(as.factor(datFrm[[x2Name]]))
+  Nx2Lvl = max(x2)
+  
+  x3 = as.numeric(as.factor(datFrm[[x3Name]]))
+  Nx3Lvl = max(x3)
   
   y = as.numeric(datFrm[[yName]])
   # Do some checking that data make sense:
@@ -37,15 +40,17 @@ genMCMC = function( datFrm, yName , qName, sName,
   # Threshold 1 and nYlevels-1 are fixed; other thresholds are estimated.
   # This allows all parameters to be interpretable on the response scale.
   nYlevels = max(y)  
-  thresh = matrix(data = NA, nrow = nQlevels, ncol = nYlevels-1)
+  thresh = matrix(data = NA, nrow = Nx1Lvl, ncol = nYlevels-1)
   thresh[, 1] = 1 + 0.5
   thresh[, nYlevels-1] = nYlevels-1 + 0.5
   # Specify the data in a list, for later shipment to JAGS:
   dataList = list(
-    x1 = q,
-    Nx1Lvl = nQlevels,
-    x2 = s,
-    Nx2Lvl = nSlevels,
+    x1 = x1,
+    Nx1Lvl = Nx1Lvl,
+    x2 = x2,
+    Nx2Lvl = Nx2Lvl,
+    x3 = x3,
+    Nx3Lvl = Nx3Lvl,
     y = y,
     NyLvl = nYlevels,
     thresh = thresh,
@@ -66,8 +71,9 @@ genMCMC = function( datFrm, yName , qName, sName,
       }
       pr[i,NyLvl] <- 1 - pnorm(thresh[x1[i], NyLvl-1] , mu[i] , 1/sigma[x1[i]]^2)
 
-      # No subject/question interaction term
-      mu[i] <- a0 + a1[x1[i]] + a2[x2[i]]
+      # mu ~ question + intervention + interval
+      # TODO: include intervention:interval interaction
+      mu[i] <- a0 + a1[x1[i]] + a2[x2[i]] + a3[x3[i]] 
     }
 
     a0 ~ dnorm((1+NyLvl)/2, 1/(NyLvl)^2)
@@ -85,24 +91,33 @@ genMCMC = function( datFrm, yName , qName, sName,
       }
     }
 
-    # Estimating beta2 variance from the data
+    # Constant sigma for beta2, the interventions are independent
     for (j2 in 1:Nx2Lvl) {
-      a2[j2] ~ dnorm(0.0, 1/a2SD^2)
+      a2[j2] ~ dnorm(0.0, 1/(NyLvl)^2)
     }
-    a2SD ~ dgamma(agammaShRa[1], agammaShRa[2])
 
-    # Convert a0,a1[],a2[] to sum-to-zero b0,b1[],b2[]:
+    # Constant sigma for beta3 (for now)
+    for (j3 in 1:Nx3Lvl) {
+      a3[j3] ~ dnorm(0.0, 1/(NyLvl)^2)
+    }
+
+    # Convert a0,a1[],a2[],a3[] to sum-to-zero b0,b1[],b2[],b3[]
     for (j1 in 1:Nx1Lvl) {
       for (j2 in 1:Nx2Lvl) {
-        m[j1,j2] <- a0 + a1[j1] + a2[j2]
+        for (j3 in 1:Nx3Lvl) {
+          m[j1,j2,j3] <- a0 + a1[j1] + a2[j2] + a3[j3]
+        }
       }
     } 
-    b0 <- mean(m[1:Nx1Lvl,1:Nx2Lvl])
+    b0 <- mean(m[1:Nx1Lvl,1:Nx2Lvl,1:Nx3Lvl])
     for (j1 in 1:Nx1Lvl) { 
-      b1[j1] <- mean(m[j1,1:Nx2Lvl]) - b0
+      b1[j1] <- mean(m[j1,1:Nx2Lvl,1:Nx3Lvl]) - b0
     }
     for (j2 in 1:Nx2Lvl) { 
-      b2[j2] <- mean(m[1:Nx1Lvl,j2]) - b0
+      b2[j2] <- mean(m[1:Nx1Lvl,j2,1:Nx3Lvl]) - b0
+    }
+    for (j3 in 1:Nx3Lvl) {
+      b3[j3] <- mean(m[1:Nx1Lvl,1:Nx2Lvl,j3]) - b0
     }
   }
   " # close quote for modelString
@@ -113,7 +128,7 @@ genMCMC = function( datFrm, yName , qName, sName,
   initsList = NULL
   #-----------------------------------------------------------------------------
   # RUN THE CHAINS
-  parameters = c("b0", "b1", "b2", "sigma", "thresh")
+  parameters = c("b0", "b1", "b2", "b3", "sigma", "thresh")
   adaptSteps = 500               # Number of steps to "tune" the samplers
   burnInSteps = 1000
   runJagsOut <- run.jags( method=runjagsMethod ,

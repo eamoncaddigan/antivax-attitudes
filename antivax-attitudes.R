@@ -65,15 +65,16 @@ print(p2)
 # Bayesian analysis of survey data ----------------------------------------
 
 # Fit a model to each question using pre-intervention data. 
-modelData <- filter(questionnaireData, interval == "pretest")
+modelData <- questionnaireData
 
 source("Jags-Yord-Xnom1grp-Mnormal.R")
 fileNameRoot = "antivax-mcmc"
 
 mcmcCoda <- genMCMC(datFrm = modelData,
                     yName = "response",
-                    qName = "question",
-                    sName = "subject_number",
+                    x1Name = "question",
+                    x2Name = "intervention",
+                    x3Name = "interval",
                     numSavedSteps = 15000,
                     thinSteps = 10,
                     saveName = fileNameRoot)
