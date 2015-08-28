@@ -8,5 +8,7 @@ Currently using Bayesian Estimation and a hierarchical model of all output measu
 ### TODO:
 
 - [x] Model individual questions
-- [ ] Add factors for intervention and interval plus interactions
+- [x] Add factors for intervention and interval plus interactions
+- [ ] *Maybe* explore the full model with all interactions. Important stuff already replicated but this would allow me to look at the effects on each question.
+- [ ] Write up results and post online
 
