@@ -64,16 +64,17 @@ genMCMC = function( datFrm, yName , x1Name, x2Name, x3Name,
     for (i in 1:Ntotal) {
       # Thresholded cummulative normal distribution
       y[i] ~ dcat(pr[i,1:NyLvl])
-      pr[i,1] <- pnorm(thresh[x1[i], 1] , mu[i] , 1/sigma[x1[i]]^2)
+      pr[i,1] <- pnorm(thresh[x1[i], 1], mu[i], 1/sigma[x1[i]]^2)
       for (k in 2:(NyLvl-1)) {
-        pr[i,k] <- max( 0 ,  pnorm(thresh[x1[i], k] ,   mu[i] , 1/sigma[x1[i]]^2 )
-                           - pnorm(thresh[x1[i], k-1] , mu[i] , 1/sigma[x1[i]]^2 ))
+        pr[i,k] <- max(0, pnorm(thresh[x1[i], k] ,   mu[i] , 1/sigma[x1[i]]^2 ) -
+                          pnorm(thresh[x1[i], k-1] , mu[i] , 1/sigma[x1[i]]^2 ))
       }
       pr[i,NyLvl] <- 1 - pnorm(thresh[x1[i], NyLvl-1] , mu[i] , 1/sigma[x1[i]]^2)
 
-      # mu ~ question + intervention + interval
-      # TODO: include intervention:interval interaction
-      mu[i] <- a0 + a1[x1[i]] + a2[x2[i]] + a3[x3[i]] + a2a3[x2[i], x3[i]]
+      # mu ~ x1*x2*x3
+      mu[i] <- a0 + a1[x1[i]] + a2[x2[i]] + a3[x3[i]] + 
+               a1a2[x1[i], x2[i]] + a1a3[x1[i], x3[i]] + a2a3[x2[i], x3[i]] + 
+               a1a2a3[x1[i], x2[i], x3[i]]
     }
 
     a0 ~ dnorm((1+NyLvl)/2, 1/(NyLvl)^2)
@@ -82,7 +83,7 @@ genMCMC = function( datFrm, yName , x1Name, x2Name, x3Name,
       # Constant sigma for beta1, we're treating all Qs as independent
       a1[j1] ~ dnorm(0.0, 1/(NyLvl)^2)
 
-      # Sigma for normal CDF, unique for each Q.
+      # Sigma for normal CDF, unique for each x1.
       sigma[j1] ~ dunif(NyLvl/1000, NyLvl*10)
 
       # Threshold distributions. 1 and NyLvl-1 are fixed, not stochastic
@@ -101,35 +102,73 @@ genMCMC = function( datFrm, yName , x1Name, x2Name, x3Name,
       a3[j3] ~ dnorm(0.0, 1/(NyLvl)^2)
     }
 
-    # Interaction term also has homogenous variance (for now)
+    # Interaction terms also has homogenous variance (for now)
+    for (j1 in 1:Nx1Lvl) {
+      for (j2 in 1:Nx2Lvl) {
+        a1a2[j1, j2] ~ dnorm(0.0, 1/(NyLvl)^2)
+      }
+    }
+    for (j1 in 1:Nx1Lvl) {
+      for (j3 in 1:Nx3Lvl) {
+        a1a3[j1, j3] ~ dnorm(0.0, 1/(NyLvl)^2)
+      }
+    }
     for (j2 in 1:Nx2Lvl) {
       for (j3 in 1:Nx3Lvl) {
         a2a3[j2, j3] ~ dnorm(0.0, 1/(NyLvl)^2)
       }
     }
-
-    # Convert a0,a1[],a2[],a3[] to sum-to-zero b0,b1[],b2[],b3[]
     for (j1 in 1:Nx1Lvl) {
       for (j2 in 1:Nx2Lvl) {
         for (j3 in 1:Nx3Lvl) {
-          m[j1, j2, j3] <- a0 + a1[j1] + a2[j2] + a3[j3] + a2a3[j2, j3]
+          a1a2a3[j1, j2, j3] ~ dnorm(0.0, 1/(NyLvl)^2)
+        }
+      }
+    }
+
+    # Compute cell means
+    for (j1 in 1:Nx1Lvl) {
+      for (j2 in 1:Nx2Lvl) {
+        for (j3 in 1:Nx3Lvl) {
+          m[j1, j2, j3] <- a0 + a1[j1] + a2[j2] + a3[j3] + 
+                           a1a2[j1, j2] + a1a3[j1, j3] + a2a3[j2, j3] + 
+                           a1a2a3[j1, j2, j3]
         }
       }
     } 
-    b0 <- mean(m[1:Nx1Lvl,1:Nx2Lvl,1:Nx3Lvl])
+
+    # Convert a0,a1[],a2[],a3[],&c. to sum-to-zero b0,b1[],b2[],b3[],&c.
+    b0 <- mean(m[1:Nx1Lvl, 1:Nx2Lvl, 1:Nx3Lvl])
     for (j1 in 1:Nx1Lvl) { 
-      b1[j1] <- mean(m[j1,1:Nx2Lvl,1:Nx3Lvl]) - b0
+      b1[j1] <- mean(m[j1, 1:Nx2Lvl, 1:Nx3Lvl]) - b0
     }
     for (j2 in 1:Nx2Lvl) { 
-      b2[j2] <- mean(m[1:Nx1Lvl,j2,1:Nx3Lvl]) - b0
+      b2[j2] <- mean(m[1:Nx1Lvl, j2, 1:Nx3Lvl]) - b0
     }
     for (j3 in 1:Nx3Lvl) {
-      b3[j3] <- mean(m[1:Nx1Lvl,1:Nx2Lvl,j3]) - b0
+      b3[j3] <- mean(m[1:Nx1Lvl, 1:Nx2Lvl, j3]) - b0
+    }
+    for (j1 in 1:Nx1Lvl) {
+      for (j2 in 1:Nx2Lvl) {
+        b1b2[j1, j2] <- mean(m[j1, j2, 1:Nx3Lvl]) - (b0 + b1[j1] + b2[j2])
+      }
+    }
+    for (j1 in 1:Nx1Lvl) {
+      for (j3 in 1:Nx3Lvl) {
+        b1b3[j1, j3] <- mean(m[j1, 1:Nx2Lvl, j3]) - (b0 + b1[j1] + b3[j3])
+      }
     }
     for (j2 in 1:Nx2Lvl) {
       for (j3 in 1:Nx3Lvl) {
-        # Just guessing HERE
-        b2b3[j2, j3] <- mean(m[1:Nx1Lvl, j2, j3])  - (b0 + b2[j2] + b3[j3])
+        b2b3[j2, j3] <- mean(m[1:Nx1Lvl, j2, j3]) - (b0 + b2[j2] + b3[j3])
+      }
+    }
+    for (j1 in 1:Nx1Lvl) {
+      for (j2 in 1:Nx2Lvl) {
+        for (j3 in 1:Nx3Lvl) {
+          b1b2b3[j1, j2, j3] <- m[j1, j2, j3] - (b0 + b1[j1] + b2[j3] + b3[j3] + 
+                                                 b1b2[j1, j2] + b1b3[j1, j3] + b2b3[j2, j3])
+        }
       }
     }
   }
@@ -141,7 +180,8 @@ genMCMC = function( datFrm, yName , x1Name, x2Name, x3Name,
   initsList = NULL
   #-----------------------------------------------------------------------------
   # RUN THE CHAINS
-  parameters = c("b0", "b1", "b2", "b3", "b2b3", "sigma", "thresh")
+  parameters = c("b0", "b1", "b2", "b3", "b1b2", "b1b3", "b2b3", "b1b2b3", 
+                 "sigma", "thresh")
   adaptSteps = 500               # Number of steps to "tune" the samplers
   burnInSteps = 1000
   runJagsOut <- run.jags( method=runjagsMethod ,
