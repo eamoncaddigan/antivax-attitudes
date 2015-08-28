@@ -112,7 +112,7 @@ genMCMC = function( datFrm, yName , x1Name, x2Name, x3Name,
     for (j1 in 1:Nx1Lvl) {
       for (j2 in 1:Nx2Lvl) {
         for (j3 in 1:Nx3Lvl) {
-          m[j1,j2,j3] <- a0 + a1[j1] + a2[j2] + a3[j3] + a2a3[j2, j3]
+          m[j1, j2, j3] <- a0 + a1[j1] + a2[j2] + a3[j3] + a2a3[j2, j3]
         }
       }
     } 
@@ -129,7 +129,7 @@ genMCMC = function( datFrm, yName , x1Name, x2Name, x3Name,
     for (j2 in 1:Nx2Lvl) {
       for (j3 in 1:Nx3Lvl) {
         # Just guessing HERE
-        b2b3[j2, j3] <- mean(m[1:1NxLvl, j2, j3]) - (b0 + b1 + b2)
+        b2b3[j2, j3] <- mean(m[1:Nx1Lvl, j2, j3])  - (b0 + b2[j2] + b3[j3])
       }
     }
   }
