@@ -73,7 +73,7 @@ genMCMC = function( datFrm, yName , x1Name, x2Name, x3Name,
 
       # mu ~ question + intervention + interval
       # TODO: include intervention:interval interaction
-      mu[i] <- a0 + a1[x1[i]] + a2[x2[i]] + a3[x3[i]] 
+      mu[i] <- a0 + a1[x1[i]] + a2[x2[i]] + a3[x3[i]] + a2a3[x2[i], x3[i]]
     }
 
     a0 ~ dnorm((1+NyLvl)/2, 1/(NyLvl)^2)
@@ -101,11 +101,18 @@ genMCMC = function( datFrm, yName , x1Name, x2Name, x3Name,
       a3[j3] ~ dnorm(0.0, 1/(NyLvl)^2)
     }
 
+    # Interaction term also has homogenous variance (for now)
+    for (j2 in 1:Nx2Lvl) {
+      for (j3 in 1:Nx3Lvl) {
+        a2a3[j2, j3] ~ dnorm(0.0, 1/(NyLvl)^2)
+      }
+    }
+
     # Convert a0,a1[],a2[],a3[] to sum-to-zero b0,b1[],b2[],b3[]
     for (j1 in 1:Nx1Lvl) {
       for (j2 in 1:Nx2Lvl) {
         for (j3 in 1:Nx3Lvl) {
-          m[j1,j2,j3] <- a0 + a1[j1] + a2[j2] + a3[j3]
+          m[j1,j2,j3] <- a0 + a1[j1] + a2[j2] + a3[j3] + a2a3[j2, j3]
         }
       }
     } 
@@ -119,6 +126,12 @@ genMCMC = function( datFrm, yName , x1Name, x2Name, x3Name,
     for (j3 in 1:Nx3Lvl) {
       b3[j3] <- mean(m[1:Nx1Lvl,1:Nx2Lvl,j3]) - b0
     }
+    for (j2 in 1:Nx2Lvl) {
+      for (j3 in 1:Nx3Lvl) {
+        # Just guessing HERE
+        b2b3[j2, j3] <- mean(m[1:1NxLvl, j2, j3]) - (b0 + b1 + b2)
+      }
+    }
   }
   " # close quote for modelString
   # Write out modelString to a text file
@@ -128,7 +141,7 @@ genMCMC = function( datFrm, yName , x1Name, x2Name, x3Name,
   initsList = NULL
   #-----------------------------------------------------------------------------
   # RUN THE CHAINS
-  parameters = c("b0", "b1", "b2", "b3", "sigma", "thresh")
+  parameters = c("b0", "b1", "b2", "b3", "b2b3", "sigma", "thresh")
   adaptSteps = 500               # Number of steps to "tune" the samplers
   burnInSteps = 1000
   runJagsOut <- run.jags( method=runjagsMethod ,
