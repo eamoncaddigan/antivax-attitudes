@@ -100,6 +100,7 @@ plotMCMC(mcmcCoda,
          saveType = "png")
 
 # This right here is the good stuff:
+mcmcMat <- as.matrix(mcmcCoda)
 plotPost((mcmcMat[, "b2b3[3,2]"] - mcmcMat[, "b2b3[3,1]"]) - 
            (mcmcMat[, "b2b3[1,2]"] - mcmcMat[, "b2b3[1,1]"]))
 # It shows that post-pre for the "disease risk" is greater than post-pre for
