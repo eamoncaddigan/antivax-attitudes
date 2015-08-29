@@ -181,7 +181,7 @@ genMCMC = function( datFrm, yName , x1Name, x2Name, x3Name,
   #-----------------------------------------------------------------------------
   # RUN THE CHAINS
   parameters = c("b0", "b1", "b2", "b3", "b1b2", "b1b3", "b2b3", "b1b2b3",
-                 "sigma", "thresh", "m") # Returning m will make mcmcCoda *HUGE*
+                 "sigma", "thresh") 
   adaptSteps = 500               # Number of steps to "tune" the samplers
   burnInSteps = 1000
   runJagsOut <- run.jags( method=runjagsMethod ,
