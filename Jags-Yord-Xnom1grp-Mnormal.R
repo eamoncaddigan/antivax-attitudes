@@ -131,13 +131,13 @@ genMCMC = function( datFrm, yName , x1Name, x2Name, x3Name,
       for (j2 in 1:Nx2Lvl) {
         for (j3 in 1:Nx3Lvl) {
           m[j1, j2, j3] <- a0 + a1[j1] + a2[j2] + a3[j3] + 
-                           a1a2[j1, j2] + a1a3[j1, j3] + a2a3[j2, j3] + 
+                           a1a2[j1, j2] + a1a3[j1, j3] + a2a3[j2, j3] +
                            a1a2a3[j1, j2, j3]
         }
       }
-    } 
+    }
 
-    # Convert a0,a1[],a2[],a3[],&c. to sum-to-zero b0,b1[],b2[],b3[],&c.
+    # Convert a0, a1[], a2[], &c. to sum-to-zero b0, b1[], b2[], &c.
     b0 <- mean(m[1:Nx1Lvl, 1:Nx2Lvl, 1:Nx3Lvl])
     for (j1 in 1:Nx1Lvl) { 
       b1[j1] <- mean(m[j1, 1:Nx2Lvl, 1:Nx3Lvl]) - b0
@@ -166,7 +166,7 @@ genMCMC = function( datFrm, yName , x1Name, x2Name, x3Name,
     for (j1 in 1:Nx1Lvl) {
       for (j2 in 1:Nx2Lvl) {
         for (j3 in 1:Nx3Lvl) {
-          b1b2b3[j1, j2, j3] <- m[j1, j2, j3] - (b0 + b1[j1] + b2[j3] + b3[j3] + 
+          b1b2b3[j1, j2, j3] <- m[j1, j2, j3] - (b0 + b1[j1] + b2[j2] + b3[j3] + 
                                                  b1b2[j1, j2] + b1b3[j1, j3] + b2b3[j2, j3])
         }
       }
@@ -180,8 +180,8 @@ genMCMC = function( datFrm, yName , x1Name, x2Name, x3Name,
   initsList = NULL
   #-----------------------------------------------------------------------------
   # RUN THE CHAINS
-  parameters = c("b0", "b1", "b2", "b3", "b1b2", "b1b3", "b2b3", "b1b2b3", 
-                 "sigma", "thresh")
+  parameters = c("b0", "b1", "b2", "b3", "b1b2", "b1b3", "b2b3", "b1b2b3",
+                 "sigma", "thresh", "m") # Returning m will make mcmcCoda *HUGE*
   adaptSteps = 500               # Number of steps to "tune" the samplers
   burnInSteps = 1000
   runJagsOut <- run.jags( method=runjagsMethod ,
