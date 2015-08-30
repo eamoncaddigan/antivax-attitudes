@@ -5,18 +5,85 @@ date: "August 29, 2015"
 output: html_document
 ---
 
-How easy is it to change people's attitude toward vaccinating their children? According to a study [published in PNAS](http://www.pnas.org/content/112/33/10321.abstract), a simple intervention that consists of showing people the negative effects of skipping childhood vaccinations causes people to become more likely to vaccinate their children. [Here's a good writeup](https://news.illinois.edu/blog/view/6367/234202) of the article if you're unable to read the original.
 
-The authors [placed their data online](https://osf.io/nx364/), which consist of survey responses before and after the intervention for three groups of participants: a control group, an "autism correction" group that were shown evidence that vaccines don't cause autism, and a "disease risk" group that were shown images of the effects of the diseases that the vaccines prevent. I decided to evaluate the data with a Bayesian model for a couple reasons. First, I'm friends with Zach Horne and John Hummel and it's good to see them doing cool work. Second, I don't have much experience working with survey data, and I was excited to try a Bayesian approach because it'd let me take a look at the data from a few different angles without having to worry about inflating the false-alarm rate.
+How easy is it to change people's attitude toward vaccinating their children? According to a study [published in PNAS](http://www.pnas.org/content/112/33/10321.abstract), a simple intervention, which consisted of showing participants images of children suffering from diseases such as rubella and measles, made participants more likely to vaccinate their children. [Here's a good writeup](https://news.illinois.edu/blog/view/6367/234202) of the article if you're unable to read the original.
 
-```{r}
-summary(cars)
-```
+The authors [placed their data online](https://osf.io/nx364/), which comprises pre- and post-intervention survey responses for three groups of participants: 
 
-You can also embed plots, for example:
+1. A control group
+2. An "autism correction" group that were shown evidence that vaccines don't cause autism.
+3. A "disease risk" group that were shown images of the effects of the diseases that the vaccines prevent. 
+
+I decided to evaluate the data with a Bayesian model for a couple reasons. First, I'm friends with two of the authors (UIUC Psychologists Zach Horne and John Hummel) and it's good to see them doing cool work. Second, my own research hasn't given me much experience working with survey data, and wanted experience with a new method. I was excited to try a Bayesian approach because this lets me take a look at the data from a few different angles without having to worry about inflating the type I (false positive) error rates.
 
 ```{r, echo=FALSE}
-plot(cars)
+library(readxl)
+library(tidyr)
+suppressMessages(library(dplyr))
+library(ggplot2)
+
+# Generates warnings for the Ps who didn't do day 2
+suppressWarnings(expData <- read_excel("Vacc_HPHH_publicDataset.xlsx", sheet = 2))
+
+# Exclude Ps who didn't do day 2 and failed the attention checks
+expData.clean <- expData %>%
+  # It's good to add a subject number so we can go back to original data
+  mutate(subject_number = 1:nrow(.)) %>%
+  filter(Returned == 1,
+         `AttentionCheck_PostTest (if = 4 then include)` == 4,
+         `AttentionChecks_Sum(include if = 4)` == 4,
+         Paid_Attention == 1)
+
+# Get all the dependent measures into a DF
+questionnaireData <- expData.clean %>%
+  # Pull out the columns and use consistent names
+  select(subject_number,
+         intervention = Condition,
+         pretest.healthy = Healthy_VaxscalePretest,
+         posttest.healthy = Healthy_VaxscalePosttest,
+         pretest.diseases = Diseases_VaxScalePretest,
+         posttest.diseases = Diseases_VaxScalePosttest,
+         pretest.doctors = Doctors_VaxScalePreTest,
+         posttest.doctors = Doctors_VaxScalePostTest,
+         pretest.side_effects = Sideeffects_VaxScalePreTest,
+         posttest.side_effects = Sideeffects_VaxScalePostTest,
+         pretest.plan_to = Planto_VaxScalePreTest,
+         posttest.plan_to = Planto_VaxScalePostTest) %>%
+  # Reverse-code the approrpiate columns
+  mutate(pretest.diseases = 7 - pretest.diseases,
+         posttest.diseases = 7 - posttest.diseases,
+         pretest.side_effects = 7 - pretest.side_effects,
+         posttest.side_effects = 7 - posttest.side_effects) %>%
+  # Tidy the data
+  gather("question", "response", -subject_number, -intervention) %>%
+  separate(question, c("interval", "question"), sep = "\\.") %>% 
+  mutate(intervention = factor(intervention, c("Control", "Autism Correction", "Disease Risk")),
+         interval = factor(interval, c("pretest", "posttest"), ordered = TRUE),
+         question = factor(question, c("healthy", "diseases", "doctors", "side_effects", "plan_to")))
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+Participants were given a surveys with five questions and asked to rate their level of agreement with each on a six-point scale.
+
+code         | question
+-------------|-------------
+healthy      | Vaccinating healthy children helps protect others by stopping the spread of disease.
+diseases     | Children do not need vaccines for diseases that are not common anymore. *reverse coded*
+doctors      | Doctors would not recommend vaccines if they were unsafe.
+side_effects | The risk of side effects outweighs any protective benefits of vaccines. *reverse coded*
+plan_to      | I plan to vaccinate my children.
+
+```{r, echo=FALSE}
+# Calculate the change-in-attitude for each subject on each question
+questionnaireData <- questionnaireData %>% 
+  group_by(subject_number, question) %>% 
+  spread(interval, response) %>% mutate(change = posttest-pretest) %>% 
+  gather("interval", "response", pretest, posttest)
+
+p2 <- ggplot(questionnaireData, aes(x = interval, y = response, group = subject_number, color = change)) +
+  geom_line(alpha = 0.2, position = position_jitter(w = 0.1, h = 0.1)) +
+  facet_grid(intervention ~ question) + 
+  scale_color_gradient2(low="red", mid="grey20", high="blue")
+print(p2)
+```
+
+The above figure shows pre- and post-intervention responses to each question. Each line represents represents a single participant's responses before and after the intervention to a single question. Lines are colored by the magnitude of the change in response; blue lines indicate more agreement (toward a more pro-vaccine stance) and red lines indicate less agreement (a more anti-vaccine stance).
