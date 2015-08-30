@@ -88,6 +88,8 @@ print(p2)
 
 The above figure shows pre- and post-intervention responses to each question. Each line represents represents a single participant's responses before and after the intervention to a single question. Lines are colored by the magnitude of the change in response; blue lines indicate more agreement (toward a more pro-vaccine stance) and red lines indicate less agreement (a more anti-vaccine stance).
 
+The JAGS code for the model is shown below. It's essentially a Bayesian analog to the three-factor ANOVA, using a thresholded cummulative normal distribution as a link function. Such models geenrally do a good job of capturing the ordinal responses obtained in surveys. The thresholds and variance of the link function are set separately for each question. The mean of the normal distribution is determined by a linear function of the question, the interval (pre-test vs. post-test) and intervention for each response, and all interactions between these factors. 
+
 ```{r, echo=FALSE}
 # Get the data ready for JAGS
 x1 <- as.numeric(as.factor(questionnaireData[["question"]]))
@@ -158,12 +160,12 @@ modelString <- "
       a2[j2] ~ dnorm(0.0, 1/(NyLvl)^2)
     }
 
-    # Constant sigma for beta3 (for now)
+    # Constant sigma for beta3
     for (j3 in 1:Nx3Lvl) {
       a3[j3] ~ dnorm(0.0, 1/(NyLvl)^2)
     }
 
-    # Interaction terms also has homogenous variance (for now)
+    # Interaction terms also have homogenous variance
     for (j1 in 1:Nx1Lvl) {
       for (j2 in 1:Nx2Lvl) {
         a1a2[j1, j2] ~ dnorm(0.0, 1/(NyLvl)^2)
@@ -234,7 +236,7 @@ modelString <- "
     }
   }
 " # close quote for modelString
-print(modelString)
+cat(modelString)
 # Write out modelString to a text file
 writeLines(modelString , con="TEMPmodel.txt")
 
