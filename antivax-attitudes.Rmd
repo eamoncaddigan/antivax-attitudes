@@ -1,0 +1,22 @@
+---
+title: "Bayesian estimation of anti-vaccination belief interventions"
+author: "Eamon Caddigan"
+date: "August 29, 2015"
+output: html_document
+---
+
+How easy is it to change people's attitude toward vaccinating their children? According to a study [published in PNAS](http://www.pnas.org/content/112/33/10321.abstract), a simple intervention that consists of showing people the negative effects of skipping childhood vaccinations causes people to become more likely to vaccinate their children. [Here's a good writeup](https://news.illinois.edu/blog/view/6367/234202) of the article if you're unable to read the original.
+
+The authors [placed their data online](https://osf.io/nx364/), which consist of survey responses before and after the intervention for three groups of participants: a control group, an "autism correction" group that were shown evidence that vaccines don't cause autism, and a "disease risk" group that were shown images of the effects of the diseases that the vaccines prevent. I decided to evaluate the data with a Bayesian model for a couple reasons. First, I'm friends with Zach Horne and John Hummel and it's good to see them doing cool work. Second, I don't have much experience working with survey data, and I was excited to try a Bayesian approach because it'd let me take a look at the data from a few different angles without having to worry about inflating the false-alarm rate.
+
+```{r}
+summary(cars)
+```
+
+You can also embed plots, for example:
+
+```{r, echo=FALSE}
+plot(cars)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
