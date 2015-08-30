@@ -61,6 +61,10 @@ ggPosteriorPredictive <- function(modelData, codaObject,
     geom_point(aes(y = posterior_mean), 
                size=3, color="red") + 
     geom_errorbar(aes(ymin = posterior_hdi_low, ymax = posterior_hdi_high), 
-                  size=2, color="red", width=0)
+                  size=2, color="red", width=0) + 
+    scale_x_continuous(breaks = 1:6) + # XXX hardcoded 6
+    scale_y_continuous(limits = c(0, 1)) +
+    xlab("Response") + 
+    ylab("Proportion of Responses")
   return(p)
 }
