@@ -73,7 +73,7 @@ doctors      | Doctors would not recommend vaccines if they were unsafe.
 side_effects | The risk of side effects outweighs any protective benefits of vaccines. *reverse coded*
 plan_to      | I plan to vaccinate my children.
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, fig.width=9}
 # Calculate the change-in-attitude for each subject on each question
 questionnaireData <- questionnaireData %>% 
   group_by(subject_number, question) %>% 
@@ -291,9 +291,9 @@ diagMCMC(codaObject = codaSamples,
          saveName = NULL)
 ```
 
-It's also important to check the predictions made by a model, "[we cannot really interpret the parameters of the model very meaningfully when the model doesn't describe the data very well](http://doingbayesiandataanalysis.blogspot.com/2015/08/a-case-in-which-metric-data-are-better.html)". Here are response histograms for each question, averaged across the levels of the other factors. Model predictions are superimposed on the histograms, along with the 95% HDI for each response.
+It's also important to check the predictions made by a model, "[we cannot really interpret the parameters of the model very meaningfully when the model doesn't describe the data very well](http://doingbayesiandataanalysis.blogspot.com/2015/08/a-case-in-which-metric-data-are-better.html)". Here are response histograms for each question, averaged across the levels of the other factors. Model predictions are superimposed on the histograms, along with the 95% HDI for each response (which is hidden behind the points).
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, fig.width=3.5, fig.height=2.5}
 source("ggPostPlot.R")
 
 for (x1Level in seq_along(levels(questionnaireData$question))) {
@@ -302,3 +302,5 @@ for (x1Level in seq_along(levels(questionnaireData$question))) {
   print(p)
 }
 ```
+
+
