@@ -211,7 +211,7 @@ DbdaDensPlot = function( codaObject , parName=varnames(codaObject)[1] , plColors
 diagMCMC = function( codaObject , parName=varnames(codaObject)[1] ,
                      saveName=NULL , saveType="jpg" ) {
   DBDAplColors = c("skyblue","black","royalblue","steelblue")
-  openGraph(height=5,width=7)
+  #openGraph(height=5,width=7)
   par( mar=0.5+c(3,4,1,0) , oma=0.1+c(0,0,2,0) , mgp=c(2.25,0.7,0) , 
        cex.lab=1.5 )
   layout(matrix(1:4,nrow=2))
