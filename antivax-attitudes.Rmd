@@ -21,6 +21,7 @@ library(readxl)
 library(tidyr)
 suppressMessages(library(dplyr))
 library(ggplot2)
+library(runjags)
 
 # Generates warnings for the Ps who didn't do day 2
 suppressWarnings(expData <- read_excel("Vacc_HPHH_publicDataset.xlsx", sheet = 2))
@@ -275,3 +276,19 @@ if (file.exists(saveName)) {
 }
 ```
 
+When model parameters are fit using Monte Carlo methods, it's important to inspect the results of the sampling procedure to make sure it's well-behaved. Here's an example of one parameter, the intercept for the mean of the cummulative normal.
+
+```{r, echo=FALSE}
+{
+# So many hoops to make Kruschke's code quiet
+sink("/dev/null")
+suppressMessages(source("DBDA2E-utilities.R"))
+sink()
+}
+
+diagMCMC(codaObject = codaSamples,
+         parName = "b0",
+         saveName = NULL)
+```
+
+It's also important to check the predictions made by a model. If the model doesn't describe your data well, there's likely a problem. Here are response histograms for each question, 
