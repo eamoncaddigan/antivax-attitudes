@@ -291,4 +291,14 @@ diagMCMC(codaObject = codaSamples,
          saveName = NULL)
 ```
 
-It's also important to check the predictions made by a model. If the model doesn't describe your data well, there's likely a problem. Here are response histograms for each question, 
+It's also important to check the predictions made by a model, "[we cannot really interpret the parameters of the model very meaningfully when the model doesn't describe the data very well](http://doingbayesiandataanalysis.blogspot.com/2015/08/a-case-in-which-metric-data-are-better.html)". Here are response histograms for each question, averaged across the levels of the other factors. Model predictions are superimposed on the histograms, along with the 95% HDI for each response.
+
+```{r, echo=FALSE}
+source("ggPostPlot.R")
+
+for (x1Level in seq_along(levels(questionnaireData$question))) {
+  p <- ggPosteriorPredictive(questionnaireData, codaSamples, x1Level = x1Level)
+  p <- p + ggtitle(paste("Question:", levels(questionnaireData$question)[x1Level]))
+  print(p)
+}
+```
