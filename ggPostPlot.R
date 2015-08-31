@@ -70,9 +70,9 @@ ggPosteriorPredictive <- function(modelData, codaObject,
   p <- ggplot(plotData, aes(x = response, y = response_proportion)) + 
     geom_bar(stat = "identity", binwidth=1, color="white", fill="skyblue") + 
     geom_point(aes(y = posterior_mean), 
-               size=5, color="red") + 
+               size=3, color="red") + 
     geom_errorbar(aes(ymin = posterior_hdi_low, ymax = posterior_hdi_high), 
-                  size=3, color="red", width=0) + 
+                  size=2, color="red", width=0) + 
     scale_x_continuous(breaks = 1:numLevels) +
     scale_y_continuous(limits = c(0, 1)) +
     xlab("Response Level") + 

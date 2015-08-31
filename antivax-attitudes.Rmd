@@ -5,6 +5,18 @@ date: "August 29, 2015"
 output: html_document
 ---
 
+```{r, echo=FALSE, warning=FALSE, message=FALSE, results="hide"}
+library(readxl)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(rjags)
+library(runjags)
+source("DBDA2E-utilities.R")
+source("ggPostPlot.R")
+```
+
+## Introduction
 
 How easy is it to change people's attitude toward vaccinating their children? According to a study [published in PNAS](http://www.pnas.org/content/112/33/10321.abstract), a simple intervention, which consisted of showing participants images of children suffering from diseases such as rubella and measles, made participants more likely to vaccinate their children. [Here's a good writeup](https://news.illinois.edu/blog/view/6367/234202) of the article if you're unable to read the original.
 
@@ -17,12 +29,6 @@ The authors [placed their data online](https://osf.io/nx364/), which comprises p
 I decided to evaluate the data with a Bayesian model for a couple reasons. First, I'm friends with two of the authors (UIUC Psychologists Zach Horne and John Hummel) and it's good to see them doing cool work. Second, my own research hasn't given me much experience working with survey data, and wanted experience with a new method. I was excited to try a Bayesian approach because this lets me take a look at the data from a few different angles without having to worry about inflating the type I (false positive) error rates.
 
 ```{r, echo=FALSE}
-library(readxl)
-library(tidyr)
-suppressMessages(library(dplyr))
-library(ggplot2)
-library(runjags)
-
 # Generates warnings for the Ps who didn't do day 2
 suppressWarnings(expData <- read_excel("Vacc_HPHH_publicDataset.xlsx", sheet = 2))
 
@@ -91,7 +97,7 @@ The above figure shows pre- and post-intervention responses to each question. Ea
 
 The JAGS code for the model is shown below. It's essentially a Bayesian analog to the three-factor ANOVA, using a thresholded cummulative normal distribution as a link function. Such models geenrally do a good job of capturing the ordinal responses obtained in surveys. The thresholds and variance of the link function are set separately for each question. The mean of the normal distribution is determined by a linear function of the question, the interval (pre-test vs. post-test) and intervention for each response, and all interactions between these factors. 
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, comment=""}
 # Get the data ready for JAGS
 x1 <- as.numeric(as.factor(questionnaireData[["question"]]))
 Nx1Lvl <- max(x1)
@@ -276,34 +282,30 @@ if (file.exists(saveName)) {
 }
 ```
 
+## Results
+
+### A "risk" intervention changes attitudes toward vaccination
+
 When model parameters are fit using Monte Carlo methods, it's important to inspect the results of the sampling procedure to make sure it's well-behaved. Here's an example of one parameter, the intercept for the mean of the cummulative normal.
 
 ```{r, echo=FALSE}
-{
-# So many hoops to make Kruschke's code quiet
-sink("/dev/null")
-suppressMessages(source("DBDA2E-utilities.R"))
-sink()
-}
-
 diagMCMC(codaObject = codaSamples,
          parName = "b0",
          saveName = NULL)
 ```
 
-It's also important to check the predictions made by a model, "[we cannot really interpret the parameters of the model very meaningfully when the model doesn't describe the data very well](http://doingbayesiandataanalysis.blogspot.com/2015/08/a-case-in-which-metric-data-are-better.html)". Here are response histograms for each question, averaged across the levels of the other factors. Model predictions are superimposed on the histograms, along with the 95% HDI for each response (which are hidden behind the points).
+It's also important to check the predictions made by a model against the data we're fitting, as "[we cannot really interpret the parameters of the model very meaningfully when the model doesn't describe the data very well](http://doingbayesiandataanalysis.blogspot.com/2015/08/a-case-in-which-metric-data-are-better.html)". Here are response histograms for each question, averaged across the levels of the other factors. Model predictions are superimposed on the histograms, along with the 95% HDI for each response.
 
 ```{r, echo=FALSE, fig.width=4, fig.height=2.5}
-source("ggPostPlot.R")
-
 for (x1Level in seq_along(levels(questionnaireData$question))) {
   p <- ggPosteriorPredictive(questionnaireData, codaSamples, x1Level = x1Level)
   p <- p + ggtitle(paste("Question:", levels(questionnaireData$question)[x1Level]))
+  p <- p + theme_classic()
   print(p)
 }
 ```
 
-Since there were no problems with sampling, and the model appears to do a good job of describing the data, we can look at parameters to see effects. First, we'll look at the interaction parameter estimates to compare the change in attitude for each intervention group.
+Since there were no problems with sampling, and the model appears to do a good job of describing the data, we can look at parameters to see effects. First, we'll look at the interaction parameter estimates to measure the change in attitude for each intervention group.
 
 ```{r echo=FALSE, fig.width=3, fig.height=3}
 mcmcMat <- as.matrix(codaSamples)
@@ -311,7 +313,7 @@ mcmcMat <- as.matrix(codaSamples)
 for (x2Level in seq_along(levels(questionnaireData$intervention))) {
   plotPost(mcmcMat[, paste0("b2b3[", x2Level, ",2]")] - mcmcMat[, paste0("b2b3[", x2Level, ",1]")],
            main = paste0(levels(questionnaireData$intervention)[x2Level], "\nposttest - pretest"),
-           compVal = 0.0,
+           compVal = 0.0, ROPE = c(-0.05, 0.05),
            xlab = "posterior density")
 }
 ```
@@ -323,10 +325,10 @@ controlLevel = which(levels(questionnaireData$intervention) == "Control")
 for (x2Level in which(levels(questionnaireData$intervention) != "Control")) {
   plotPost((mcmcMat[, paste0("b2b3[", x2Level, ",2]")] - mcmcMat[, paste0("b2b3[", x2Level, ",1]")]) - 
              (mcmcMat[, paste0("b2b3[", controlLevel, ",2]")] - mcmcMat[, paste0("b2b3[", controlLevel, ",1]")]),
-           compVal = 0.0,
+           compVal = 0.0, ROPE = c(-0.05, 0.05),
            main = paste0(levels(questionnaireData$intervention)[x2Level], "\nchange vs. Control"),
            xlab = "posterior density")
 }
 ```
 
-Using a Bayesian estimation, we have replicated the findings of Horne and colleagues. The posterior distribution above shows that "disease risk" participants shifted their response about half an interval relative to the control group following the intervention. The "autism correction" participants, however, were no more likely to vaccinate than the control group.
+The posterior distribution above shows that "disease risk" participants shifted their response about half an interval relative to the control group following the intervention. The "autism correction" participants, however, were no more likely to vaccinate than the control group. Using Bayesian estimation, we have replicated the findings of Horne and colleagues. 
