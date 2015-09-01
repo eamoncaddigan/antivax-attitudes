@@ -316,7 +316,7 @@ for (x2Level in seq_along(levels(questionnaireData$intervention))) {
              (mcmcMat[, "b3[1]"] + mcmcMat[, paste0("b2b3[", x2Level, ",1]")]),
            main = paste0(levels(questionnaireData$intervention)[x2Level], "\nposttest - pretest"),
            compVal = 0.0, ROPE = c(-0.05, 0.05),
-           xlab = "posterior density")
+           xlab = "")
 }
 ```
 
@@ -331,7 +331,7 @@ for (x2Level in which(levels(questionnaireData$intervention) != "Control")) {
              (mcmcMat[, paste0("b2b3[", controlLevel, ",2]")] - mcmcMat[, paste0("b2b3[", controlLevel, ",1]")]),
            compVal = 0.0, ROPE = c(-0.05, 0.05),
            main = paste0(levels(questionnaireData$intervention)[x2Level], "\nchange vs. Control"),
-           xlab = "posterior density")
+           xlab = "")
 }
 ```
 
@@ -368,3 +368,9 @@ for (x1Level in seq_along(levels(questionnaireData$question))) {
   }
 }
 ```
+
+Here the only credible differences we see both occur for participants in the "disease risk" group. The "healthy" ("Vaccinating healthy children helps protect others by stopping the spread of disease.") and "diseases" ("Children do not need vaccines for diseases that are not common anymore.") questions show a reliable positive shift, which makes a lot of sense given the nature of the intervention! You might notice that the HDIs are very wide for these posteriors compared to the ones shown above. This is likely driven primarily by the fact that this comparison relies on a three-way interaction, which has greater variance (as is typical in traditional ANOVA models). 
+
+### Expanding the models
+
+This is just one way to model the data, and other models may be appropriate for slightly different questions. For instance, the standard deviation and thereshold values were fit separately for each question here, but these could instead be based on a hyperparameter that could iteself be modelled. I also didn't model subject effects; there were many subjects and few data points per subject, so a full model with subjects included would take much longer to fit. This approach requires an investigator to be very deliberate about modelling decisions, which I generally see as a good thing.
