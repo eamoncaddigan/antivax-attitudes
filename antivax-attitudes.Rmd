@@ -311,7 +311,8 @@ Since there were no problems with sampling, and the model appears to do a good j
 mcmcMat <- as.matrix(codaSamples)
 
 for (x2Level in seq_along(levels(questionnaireData$intervention))) {
-  plotPost(mcmcMat[, paste0("b2b3[", x2Level, ",2]")] - mcmcMat[, paste0("b2b3[", x2Level, ",1]")],
+  plotPost((mcmcMat[, "b3[2]"] + mcmcMat[, paste0("b2b3[", x2Level, ",2]")]) - 
+             (mcmcMat[, "b3[1]"] + mcmcMat[, paste0("b2b3[", x2Level, ",1]")]),
            main = paste0(levels(questionnaireData$intervention)[x2Level], "\nposttest - pretest"),
            compVal = 0.0, ROPE = c(-0.05, 0.05),
            xlab = "posterior density")
@@ -332,3 +333,32 @@ for (x2Level in which(levels(questionnaireData$intervention) != "Control")) {
 ```
 
 The posterior distribution above shows that "disease risk" participants shifted their response about half an interval relative to the control group following the intervention. The "autism correction" participants, however, were no more likely to vaccinate than the control group. Using Bayesian estimation, we have replicated the findings of Horne and colleagues. 
+
+### Post hoc comparisons
+
+An analysis following the tradition of null-hypothesis significance testing (NHST) compares a test-statistic (e.g., an F ratio calculated during an ANOVA) against the sampling distribution of that statistic under the null hypothesis. There is always the risk on incorrectly rejecting the null hypothesis when in fact there is no real effect; the goal of NHST is to minimize the risk of these "type I" errors. The more tests you perform, the more likely you are to make such an error due to random variation. The [Wikipedia article on the "Multiple Comparisons Problem"](https://en.wikipedia.org/wiki/Multiple_comparisons_problem) is an approachable read on the topic and explains some of the "corrections" that are often applied when making mulitple comparisons in a NHST framework.
+
+In Bayesian estimation, instead of trying to minimize type I error, the goal is to estimate parameters of a model of the data. The posterior distribution provides a range of credible values that these parameters can take. As I've made above, inferences are drawn from these parameter estimates; we see directly that the "disease risk" intervention shifts participants' attitude toward vaccination about one half of an interval. Given that we fit a model to all of the data, we can compare parameter distributions without worrying about increasing the chance of generating false positives. [Gelman, Hill, and Yajima (2008)](http://www.stat.columbia.edu/~gelman/research/unpublished/multiple2.pdf) is a great resource on this. 
+
+For example, we can look at the size of the shift in attitude toward each question for each group. These 15 additional comparisons would either seriously inflate the type I error rate (using a p-value of 0.05 on each test would result in an overall error rate of `r round(1 - (1 - 0.05)^15, 2)`), or require much smaller nominal p-values for each test. 
+
+```{r, echo=FALSE, fig.width=4, fig.height=4}
+for (x2Level in seq_along(levels(questionnaireData$intervention))) {
+  for (x1Level in seq_along(levels(questionnaireData$question))) {
+    plotPost((mcmcMat[, "b3[2]"] + 
+                mcmcMat[, paste0("b1b2[", x1Level, ",", x2Level, "]")] + 
+                mcmcMat[, paste0("b1b3[", x1Level, ",2]")] + 
+                mcmcMat[, paste0("b2b3[", x2Level, ",2]")] + 
+                mcmcMat[, paste0("b1b2b3[", x1Level, ",", x2Level, ",2]")]) - 
+              (mcmcMat[, "b3[1]"] + 
+                mcmcMat[, paste0("b1b2[", x1Level, ",", x2Level, "]")] + 
+                mcmcMat[, paste0("b1b3[", x1Level, ",1]")] + 
+                mcmcMat[, paste0("b2b3[", x2Level, ",1]")] + 
+                mcmcMat[, paste0("b1b2b3[", x1Level, ",", x2Level, ",1]")]), 
+           main = paste(levels(questionnaireData$intervention)[x2Level], 
+                        levels(questionnaireData$question)[x1Level], sep = "\n"),
+           compVal = 0.0, ROPE = c(-0.05, 0.05),
+           xlab = "")
+  }
+}
+```
