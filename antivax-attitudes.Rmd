@@ -243,7 +243,6 @@ modelString <- "
     }
   }
 " # close quote for modelString
-cat(modelString)
 # Write out modelString to a text file
 writeLines(modelString , con="TEMPmodel.txt")
 
@@ -374,3 +373,15 @@ Here the only credible differences we see both occur for participants in the "di
 ### Expanding the models
 
 This is just one way to model the data, and other models may be appropriate for slightly different questions. For instance, the standard deviation and thereshold values were fit separately for each question here, but these could instead be based on a hyperparameter that could iteself be modelled. I also didn't model subject effects; there were many subjects and few data points per subject, so a full model with subjects included would take much longer to fit. This approach requires an investigator to be very deliberate about modelling decisions, which I generally see as a good thing.
+
+### Conclusions
+
+Conclude something
+
+## The model
+
+Here's the JAGS code for anybody interested
+
+```{r, echo=FALSE}
+cat(modelString)
+```
