@@ -1,5 +1,5 @@
 ---
-title: "Bayesian estimation of anti-vaccination belief interventions"
+title: "Bayesian estimation of anti-vaccination belief changes"
 author: "Eamon Caddigan"
 date: "August 29, 2015"
 output: html_document
@@ -288,7 +288,7 @@ if (file.exists(saveName)) {
 
 When model parameters are fit using Monte Carlo methods, it's important to inspect the results of the sampling procedure to make sure it's well-behaved. Here's an example of one parameter, the intercept for the mean of the cummulative normal.
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, fig.width=5, fig.height=5}
 diagMCMC(codaObject = codaSamples,
          parName = "b0",
          saveName = NULL)
@@ -307,9 +307,10 @@ for (x1Level in seq_along(levels(questionnaireData$question))) {
 
 Since there were no problems with sampling, and the model appears to do a good job of describing the data, we can look at parameters to see effects. First, we'll look at the interaction parameter estimates to measure the change in attitude for each intervention group.
 
-```{r echo=FALSE, fig.width=3, fig.height=3}
+```{r echo=FALSE, fig.width=9, fig.height=4}
 mcmcMat <- as.matrix(codaSamples)
 
+par(mfrow = c(1, 3))
 for (x2Level in seq_along(levels(questionnaireData$intervention))) {
   plotPost((mcmcMat[, "b3[2]"] + mcmcMat[, paste0("b2b3[", x2Level, ",2]")]) - 
              (mcmcMat[, "b3[1]"] + mcmcMat[, paste0("b2b3[", x2Level, ",1]")]),
@@ -321,8 +322,10 @@ for (x2Level in seq_along(levels(questionnaireData$intervention))) {
 
 Only the "disease risk" group had a positive shift in vaccination attitudes overall. We can also use the posterior distributions to directly estimate the shifts relative to the control group. 
 
-```{r echo=FALSE, fig.width=4, fig.height=3}
+```{r echo=FALSE, fig.width=9, fig.height=4}
 controlLevel = which(levels(questionnaireData$intervention) == "Control")
+
+par(mfrow = c(1, 2))
 for (x2Level in which(levels(questionnaireData$intervention) != "Control")) {
   plotPost((mcmcMat[, paste0("b2b3[", x2Level, ",2]")] - mcmcMat[, paste0("b2b3[", x2Level, ",1]")]) - 
              (mcmcMat[, paste0("b2b3[", controlLevel, ",2]")] - mcmcMat[, paste0("b2b3[", controlLevel, ",1]")]),
@@ -342,9 +345,12 @@ In Bayesian estimation, instead of trying to minimize type I error, the goal is 
 
 For example, we can look at the size of the shift in attitude toward each question for each group. These 15 additional comparisons would either seriously inflate the type I error rate (using a p-value of 0.05 on each test would result in an overall error rate of `r round(1 - (1 - 0.05)^15, 2)`), or require much smaller nominal p-values for each test. 
 
-```{r, echo=FALSE, fig.width=4, fig.height=4}
-for (x2Level in seq_along(levels(questionnaireData$intervention))) {
-  for (x1Level in seq_along(levels(questionnaireData$question))) {
+```{r, echo=FALSE, fig.width=9, fig.height=3}
+
+# Don't know why par(mfrow = c(5, 3)) doesn't work. :/
+for (x1Level in seq_along(levels(questionnaireData$question))) {
+  par(mfrow = c(1, 3))
+  for (x2Level in seq_along(levels(questionnaireData$intervention))) {
     plotPost((mcmcMat[, "b3[2]"] + 
                 mcmcMat[, paste0("b1b2[", x1Level, ",", x2Level, "]")] + 
                 mcmcMat[, paste0("b1b3[", x1Level, ",2]")] + 
