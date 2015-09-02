@@ -1,3 +1,6 @@
+# Note: this code has been pulled over to antivax-attitudes.Rmd and subsequently
+# modified. I'm keeping the file around for archival purposes.
+
 # Yeah, the standard Hadley stack. /sigh
 library(readxl)
 library(tidyr)

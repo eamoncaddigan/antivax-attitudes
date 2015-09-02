@@ -1,3 +1,6 @@
+# Note: this code has been pulled over to antivax-attitudes.Rmd and subsequently
+# modified. I'm keeping the file around for archival purposes.
+
 # Jags-Yord-Xnom1grp-Mnormal.R 
 # Accompanies the book:
 #   Kruschke, J. K. (2015). Doing Bayesian Data Analysis, Second Edition: 
