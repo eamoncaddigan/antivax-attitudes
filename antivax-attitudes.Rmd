@@ -5,30 +5,26 @@ date: "August 29, 2015"
 output: html_document
 ---
 
-```{r, echo=FALSE, warning=FALSE, message=FALSE, results="hide"}
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(cache=TRUE, echo=FALSE, warning=FALSE, message=FALSE,
+                      fig.width=9, fig.align="center")
+```
+
+```{r setup_data, results="hide"}
+# Required librarys and external files ----------------------------------------
+
 library(readxl)
 library(tidyr)
 library(dplyr)
 library(ggplot2)
+library(gridExtra)
 library(rjags)
 library(runjags)
 source("DBDA2E-utilities.R")
 source("ggPostPlot.R")
-```
 
-## Introduction
+# Clean and process the data --------------------------------------------------
 
-How easy is it to change people's attitude toward vaccinating their children? According to a study [published in PNAS](http://www.pnas.org/content/112/33/10321.abstract), a simple intervention, which consisted of showing participants images of children suffering from diseases such as rubella and measles, made participants more likely to vaccinate their children. [Here's a good writeup](https://news.illinois.edu/blog/view/6367/234202) of the article if you're unable to read the original.
-
-The authors [placed their data online](https://osf.io/nx364/), which comprises pre- and post-intervention survey responses for three groups of participants: 
-
-1. A control group
-2. An "autism correction" group that were shown evidence that vaccines don't cause autism.
-3. A "disease risk" group that were shown images of the effects of the diseases that the vaccines prevent. 
-
-I decided to evaluate the data with a Bayesian model for a couple reasons. First, I'm friends with two of the authors (UIUC Psychologists Zach Horne and John Hummel) and it's good to see them doing cool work. Second, my own research hasn't given me much experience working with survey data, and wanted experience with a new method. I was excited to try a Bayesian approach because this lets me take a look at the data from a few different angles without having to worry about inflating the type I (false positive) error rates.
-
-```{r, echo=FALSE}
 # Generates warnings for the Ps who didn't do day 2
 suppressWarnings(expData <- read_excel("Vacc_HPHH_publicDataset.xlsx", sheet = 2))
 
@@ -64,10 +60,26 @@ questionnaireData <- expData.clean %>%
   # Tidy the data
   gather("question", "response", -subject_number, -intervention) %>%
   separate(question, c("interval", "question"), sep = "\\.") %>% 
-  mutate(intervention = factor(intervention, c("Control", "Autism Correction", "Disease Risk")),
-         interval = factor(interval, c("pretest", "posttest"), ordered = TRUE),
-         question = factor(question, c("healthy", "diseases", "doctors", "side_effects", "plan_to")))
+  mutate(intervention = factor(intervention, 
+                               c("Control", "Autism Correction", "Disease Risk")),
+         interval = factor(interval, 
+                           c("pretest", "posttest"), ordered = TRUE),
+         question = factor(question, 
+                           c("healthy", "diseases", "doctors", "side_effects", "plan_to")))
+# -----------------------------------------------------------------------------
 ```
+
+## Introduction
+
+How easy is it to change people's attitude toward vaccinating their children? According to a study [published in PNAS](http://www.pnas.org/content/112/33/10321.abstract), a simple intervention, which consisted of showing participants images of children suffering from diseases such as rubella and measles, made participants more likely to vaccinate their children. [Here's a good writeup](https://news.illinois.edu/blog/view/6367/234202) of the article if you're unable to read the original.
+
+The authors [placed their data online](https://osf.io/nx364/), which comprises pre- and post-intervention survey responses for three groups of participants: 
+
+1. A control group
+2. An "autism correction" group that were shown evidence that vaccines don't cause autism.
+3. A "disease risk" group that were shown images of the effects of the diseases that the vaccines prevent. 
+
+I decided to evaluate the data with a Bayesian model for a couple reasons. First, I'm friends with two of the authors (University of Illinois Psychologists Zach Horne and John Hummel) and it's good to see them doing cool work. Second, my own research hasn't given me much experience working with survey data, and I wanted experience with a new method. I was excited to try a Bayesian approach because it makes it possible to perform post hoc comparisons without inflating the type I (false positive) error rates.
 
 Participants were given a surveys with five questions and asked to rate their level of agreement with each on a six-point scale.
 
@@ -79,7 +91,7 @@ doctors      | Doctors would not recommend vaccines if they were unsafe.
 side_effects | The risk of side effects outweighs any protective benefits of vaccines. *reverse coded*
 plan_to      | I plan to vaccinate my children.
 
-```{r, echo=FALSE, fig.width=9}
+```{r plot_responses, dependson="setup_data"}
 # Calculate the change-in-attitude for each subject on each question
 questionnaireData <- questionnaireData %>% 
   group_by(subject_number, question) %>% 
@@ -93,11 +105,13 @@ p2 <- ggplot(questionnaireData, aes(x = interval, y = response, group = subject_
 print(p2)
 ```
 
-The above figure shows pre- and post-intervention responses to each question. Each line represents represents a single participant's responses before and after the intervention to a single question. Lines are colored by the magnitude of the change in response; blue lines indicate more agreement (toward a more pro-vaccine stance) and red lines indicate less agreement (a more anti-vaccine stance).
+The above figure shows the data. Each line represents represents a single participant's responses before and after the intervention to a single question. Lines are colored by the magnitude of the change in response; blue lines indicate more agreement (toward a more pro-vaccine stance) and red lines indicate less agreement (a more anti-vaccine stance).
 
-The JAGS code for the model is shown below. It's essentially a Bayesian analog to the three-factor ANOVA, using a thresholded cummulative normal distribution as a link function. Such models geenrally do a good job of capturing the ordinal responses obtained in surveys. The thresholds and variance of the link function are set separately for each question. The mean of the normal distribution is determined by a linear function of the question, the interval (pre-test vs. post-test) and intervention for each response, and all interactions between these factors. 
+The JAGS code for the model is part of the source of this document, which is [available on Github](https://github.com/eamoncaddigan/antivax-attitudes). It uses a Bayesian analog to a three-factor ANOVA, with a thresholded cummulative normal distribution serving as a link function. Such models generally do a good job of capturing ordinal responses such as those obtained from surveys. The thresholds and variance of the link function were set separately for each question. The mean of the normal distribution is estimated for each response using a linear function of the question, the interval (pre-test vs. post-test), the intervention, and all interactions between these factors. 
 
-```{r, echo=FALSE, comment=""}
+## Results
+
+```{r run_model, dependson="setup_data"}
 # Get the data ready for JAGS
 x1 <- as.numeric(as.factor(questionnaireData[["question"]]))
 Nx1Lvl <- max(x1)
@@ -281,32 +295,32 @@ if (file.exists(saveName)) {
 }
 ```
 
-## Results
-
 ### A "risk" intervention changes attitudes toward vaccination
 
-When model parameters are fit using Monte Carlo methods, it's important to inspect the results of the sampling procedure to make sure it's well-behaved. Here's an example of one parameter, the intercept for the mean of the cummulative normal.
+When fitting model parameters using Monte Carlo methods, it's important to inspect the samples to make sure the sampling procedure was well-behaved. Here's an example of one parameter, the intercept for the mean of the cummulative normal.
 
-```{r, echo=FALSE, fig.width=5, fig.height=5}
+```{r plot_diag, dependson="run_model", fig.width=5, fig.height=5}
 diagMCMC(codaObject = codaSamples,
          parName = "b0",
          saveName = NULL)
 ```
 
-It's also important to check the predictions made by a model against the data we're fitting, as "[we cannot really interpret the parameters of the model very meaningfully when the model doesn't describe the data very well](http://doingbayesiandataanalysis.blogspot.com/2015/08/a-case-in-which-metric-data-are-better.html)". Here are response histograms for each question, averaged across the levels of the other factors. Model predictions are superimposed on the histograms, along with the 95% HDI for each response.
+It's also important to check the predictions made by a model against the data being fit, as "[we cannot really interpret the parameters of the model very meaningfully when the model doesn't describe the data very well](http://doingbayesiandataanalysis.blogspot.com/2015/08/a-case-in-which-metric-data-are-better.html)". Here are response histograms for each question, averaged across the levels of the other factors. Model predictions are superimposed on the histograms, along with the 95% HDI for each response.
 
-```{r, echo=FALSE, fig.width=4, fig.height=2.5}
+```{r plot_ppc, dependson="run_model", fig.height=6}
+plots <- list()
 for (x1Level in seq_along(levels(questionnaireData$question))) {
   p <- ggPosteriorPredictive(questionnaireData, codaSamples, x1Level = x1Level)
-  p <- p + ggtitle(paste("Question:", levels(questionnaireData$question)[x1Level]))
+  p <- p + ggtitle(levels(questionnaireData$question)[x1Level])
   p <- p + theme_classic()
-  print(p)
+  plots[[length(plots)+1]] <- p
 }
+do.call(grid.arrange, c(plots, ncol=3))
 ```
 
-Since there were no problems with sampling, and the model appears to do a good job of describing the data, we can look at parameters to see effects. First, we'll look at the interaction parameter estimates to measure the change in attitude for each intervention group.
+Since there were no problems with sampling, and the model appears to do a good job of describing the data, we look at the parameters to estimate the effects. Here are the interaction parameter estimates, which measure the change in attitude for each intervention group.
 
-```{r echo=FALSE, fig.width=9, fig.height=4}
+```{r plot_change, dependson="run_model", fig.height=4}
 mcmcMat <- as.matrix(codaSamples)
 
 par(mfrow = c(1, 3))
@@ -319,9 +333,11 @@ for (x2Level in seq_along(levels(questionnaireData$intervention))) {
 }
 ```
 
-Only the "disease risk" group had a positive shift in vaccination attitudes overall. We can also use the posterior distributions to directly estimate the shifts relative to the control group. 
+These plots highlight the 95% highest density interval (HDI) for the posterior distributions of the parameters. Also highlighted are a comparison value, which in this case is a pre- vs. post-test difference of 0, and a "range of practical equivalence" (ROPE) around the comparison value. The HDI of the posterior distribution of attitude shifts for the "disease risk" group" (but no other group) falls completely outside this ROPE, so we can reasonably conclude that this intervention changes participants' attitudes toward vaccination. 
 
-```{r echo=FALSE, fig.width=9, fig.height=4}
+we can also use the posterior distributions to directly estimate the shifts relative to the control group. 
+
+```{r plot_change_rel, dependson="run_model", fig.height=4}
 controlLevel = which(levels(questionnaireData$intervention) == "Control")
 
 par(mfrow = c(1, 2))
@@ -334,17 +350,17 @@ for (x2Level in which(levels(questionnaireData$intervention) != "Control")) {
 }
 ```
 
-The posterior distribution above shows that "disease risk" participants shifted their response about half an interval relative to the control group following the intervention. The "autism correction" participants, however, were no more likely to vaccinate than the control group. Using Bayesian estimation, we have replicated the findings of Horne and colleagues. 
+The posterior distribution above shows that "disease risk" participants shifted their response about half an interval relative to the control group following the intervention. The "autism correction" participants, however, did not show a credible change in vaccination attitudes. Using Bayesian estimation, we have replicated the findings of Horne and colleagues. 
 
 ### Post hoc comparisons
 
-An analysis following the tradition of null-hypothesis significance testing (NHST) compares a test-statistic (e.g., an F ratio calculated during an ANOVA) against the sampling distribution of that statistic under the null hypothesis. There is always the risk on incorrectly rejecting the null hypothesis when in fact there is no real effect; the goal of NHST is to minimize the risk of these "type I" errors. The more tests you perform, the more likely you are to make such an error due to random variation. The [Wikipedia article on the "Multiple Comparisons Problem"](https://en.wikipedia.org/wiki/Multiple_comparisons_problem) is an approachable read on the topic and explains some of the "corrections" that are often applied when making mulitple comparisons in a NHST framework.
+An analysis following the tradition of null-hypothesis significance testing (NHST) attempts to minimize the risk of "type I" errors, which occur when the "null" hypothesis (i.e., there is no effect) is erroneously rejected. The more tests performed in the course of an analysis, the more likely that such an error will occur due to random variation. The [Wikipedia article on the "Multiple Comparisons Problem"](https://en.wikipedia.org/wiki/Multiple_comparisons_problem) is an approachable read on the topic and explains many of the corrections that are applied when making mulitple comparisons in a NHST framework.
 
-In Bayesian estimation, instead of trying to minimize type I error, the goal is to estimate parameters of a model of the data. The posterior distribution provides a range of credible values that these parameters can take. As I've made above, inferences are drawn from these parameter estimates; we see directly that the "disease risk" intervention shifts participants' attitude toward vaccination about one half of an interval. Given that we fit a model to all of the data, we can compare parameter distributions without worrying about increasing the chance of generating false positives. [Gelman, Hill, and Yajima (2008)](http://www.stat.columbia.edu/~gelman/research/unpublished/multiple2.pdf) is a great resource on this. 
+Instead of focusing on type I error, the goal of Bayesian estimation is to estimate values of the parameters of a model of the data. The posterior distribution provides a range of credible values that these parameters can take. Inferences are made on the basis of these estimates; e.g., we see directly that the "disease risk" intervention shifts participants' attitude toward vaccination about one half of an interval. Since a single model was fit to all the data, additional comparisons of parameter distributions don't increase the chance of generating false positives. [Gelman, Hill, and Yajima (2008)](http://www.stat.columbia.edu/~gelman/research/unpublished/multiple2.pdf) is a great resource on this. 
 
-For example, we can look at the size of the shift in attitude toward each question for each group. These 15 additional comparisons would either seriously inflate the type I error rate (using a p-value of 0.05 on each test would result in an overall error rate of `r round(1 - (1 - 0.05)^15, 2)`), or require much smaller nominal p-values for each test. 
+For example, we can look at the size of the shift in attitude toward each question for each group. If we used an NHST approach, these 15 additional comparisons would either seriously inflate the type I error rate (using a p-value of 0.05 on each test would result in an overall error rate of `r round(1 - (1 - 0.05)^15, 2)`), or require much smaller nominal p-values for each test. 
 
-```{r, echo=FALSE, fig.width=9, fig.height=3}
+```{r plot_posthoc, dependson="run_model", fig.height=2.5}
 
 # Don't know why par(mfrow = c(5, 3)) doesn't work. :/
 for (x1Level in seq_along(levels(questionnaireData$question))) {
@@ -368,20 +384,16 @@ for (x1Level in seq_along(levels(questionnaireData$question))) {
 }
 ```
 
-Here the only credible differences we see both occur for participants in the "disease risk" group. The "healthy" ("Vaccinating healthy children helps protect others by stopping the spread of disease.") and "diseases" ("Children do not need vaccines for diseases that are not common anymore.") questions show a reliable positive shift, which makes a lot of sense given the nature of the intervention! You might notice that the HDIs are very wide for these posteriors compared to the ones shown above. This is likely driven primarily by the fact that this comparison relies on a three-way interaction, which has greater variance (as is typical in traditional ANOVA models). 
+The only credible differences for single questions both occur for participants in the "disease risk" group. The "healthy" ("Vaccinating healthy children helps protect others by stopping the spread of disease.") and "diseases" ("Children do not need vaccines for diseases that are not common anymore.") questions show a reliable positive shift, which makes a lot of sense given the nature of the intervention. However, it's important to note that the HDIs are very wide for these posteriors compared to the ones shown above. This is driven primarily by the fact that this comparison relies on a three-way interaction, which has greater variance (as is typical in traditional ANOVA models). 
 
 ### Expanding the models
 
-This is just one way to model the data, and other models may be appropriate for slightly different questions. For instance, the standard deviation and thereshold values were fit separately for each question here, but these could instead be based on a hyperparameter that could iteself be modelled. I also didn't model subject effects; there were many subjects and few data points per subject, so a full model with subjects included would take much longer to fit. This approach requires an investigator to be very deliberate about modelling decisions, which I generally see as a good thing.
+My primary goal was to examine the specific conclusions made by Horne and colleagues. However, this is just one way to model the data, and different models are more appropriate for different questions. For instance, the standard deviation and thereshold values were fit separately for each question here, but these could instead be based on a hyperparameter that could iteself be modelled. I also didn't model subject effects; there were many subjects and few data points per subject, so a full model with subjects included would take much longer to fit, but may produce more generalizable results. Bayesian estimation requires an investigator to be intentional about modelling decisions, which I generally see as an good thing.
 
-### Conclusions
+### What about priors
 
-Conclude something
+A defining characteristic of Bayesian analyses is that prior information about the model is combined with a likelihood (derived from the data) to produce posterior distributions. In this analysis, I used priors that put weak constraints on the values of the parameters. If an investigator has reason to assume that parameters will take on certain values, this prior information can -- and should -- be incorporated into the analysis. Again, I like that these decisions have to be made deliberately. 
 
-## The model
+## Conclusions
 
-Here's the JAGS code for anybody interested
-
-```{r, echo=FALSE}
-cat(modelString)
-```
+Concerns about a possible link between childhood vaccination and autism is causing some parents to skip childhood vaccinations, which is dangerous. However, an intervention that exposes participants to the consequences of the diseases prevented by vaccination makes them respond more favorably toward vaccination. A separate group of participants did not change their attitudes after being shown information discrediting the vaccination-autism link, nor did a group of control participants. 
