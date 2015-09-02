@@ -320,34 +320,38 @@ do.call(grid.arrange, c(plots, ncol=3))
 
 Since there were no problems with sampling, and the model appears to do a good job of describing the data, we look at the parameters to estimate the effects. Here are the interaction parameter estimates, which measure the change in attitude for each intervention group.
 
-```{r plot_change, dependson="run_model", fig.height=4}
+```{r plot_change, dependson="run_model", fig.height=3}
 mcmcMat <- as.matrix(codaSamples)
 
-par(mfrow = c(1, 3))
+par(mfrow = c(1, 3), mar=c(2, 1, 1, 1), oma=c(0, 0, 4, 0))
 for (x2Level in seq_along(levels(questionnaireData$intervention))) {
   plotPost((mcmcMat[, "b3[2]"] + mcmcMat[, paste0("b2b3[", x2Level, ",2]")]) - 
              (mcmcMat[, "b3[1]"] + mcmcMat[, paste0("b2b3[", x2Level, ",1]")]),
-           main = paste0(levels(questionnaireData$intervention)[x2Level], "\nposttest - pretest"),
+           main = "",
            compVal = 0.0, ROPE = c(-0.05, 0.05),
            xlab = "")
+  mtext(levels(questionnaireData$intervention)[x2Level], side=3, line=1)
 }
+title("Post-test - pre-test", outer=TRUE)
 ```
 
 These plots highlight the 95% highest density interval (HDI) for the posterior distributions of the parameters. Also highlighted are a comparison value, which in this case is a pre- vs. post-test difference of 0, and a "range of practical equivalence" (ROPE) around the comparison value. The HDI of the posterior distribution of attitude shifts for the "disease risk" group" (but no other group) falls completely outside this ROPE, so we can reasonably conclude that this intervention changes participants' attitudes toward vaccination. 
 
 we can also use the posterior distributions to directly estimate the shifts relative to the control group. 
 
-```{r plot_change_rel, dependson="run_model", fig.height=4}
+```{r plot_change_rel, dependson="run_model", fig.width=6, fig.height=3}
 controlLevel = which(levels(questionnaireData$intervention) == "Control")
 
-par(mfrow = c(1, 2))
+par(mfrow = c(1, 2), mar=c(2, 1, 1, 1), oma=c(0, 0, 4, 0))
 for (x2Level in which(levels(questionnaireData$intervention) != "Control")) {
   plotPost((mcmcMat[, paste0("b2b3[", x2Level, ",2]")] - mcmcMat[, paste0("b2b3[", x2Level, ",1]")]) - 
              (mcmcMat[, paste0("b2b3[", controlLevel, ",2]")] - mcmcMat[, paste0("b2b3[", controlLevel, ",1]")]),
            compVal = 0.0, ROPE = c(-0.05, 0.05),
-           main = paste0(levels(questionnaireData$intervention)[x2Level], "\nchange vs. Control"),
+           main = "",
            xlab = "")
+  mtext(levels(questionnaireData$intervention)[x2Level], side=3, line=1)
 }
+title("Change relative to control", outer=TRUE)
 ```
 
 The posterior distribution above shows that "disease risk" participants shifted their response about half an interval relative to the control group following the intervention. The "autism correction" participants, however, did not show a credible change in vaccination attitudes. Using Bayesian estimation, we have replicated the findings of Horne and colleagues. 
