@@ -360,11 +360,11 @@ Instead of focusing on type I error, the goal of Bayesian estimation is to estim
 
 For example, we can look at the size of the shift in attitude toward each question for each group. If we used an NHST approach, these 15 additional comparisons would either seriously inflate the type I error rate (using a p-value of 0.05 on each test would result in an overall error rate of `r round(1 - (1 - 0.05)^15, 2)`), or require much smaller nominal p-values for each test. 
 
-```{r plot_posthoc, dependson="run_model", fig.height=2.5}
+```{r plot_posthoc, dependson="run_model", fig.height=9}
 
-# Don't know why par(mfrow = c(5, 3)) doesn't work. :/
+# 5 x 3 grid of plots. So understandable!
+par(mfrow = c(5, 3), mar=c(2, 1, 1, 1), oma=c(0, 0, 2, 4))
 for (x1Level in seq_along(levels(questionnaireData$question))) {
-  par(mfrow = c(1, 3))
   for (x2Level in seq_along(levels(questionnaireData$intervention))) {
     plotPost((mcmcMat[, "b3[2]"] + 
                 mcmcMat[, paste0("b1b2[", x1Level, ",", x2Level, "]")] + 
@@ -375,11 +375,19 @@ for (x1Level in seq_along(levels(questionnaireData$question))) {
                 mcmcMat[, paste0("b1b2[", x1Level, ",", x2Level, "]")] + 
                 mcmcMat[, paste0("b1b3[", x1Level, ",1]")] + 
                 mcmcMat[, paste0("b2b3[", x2Level, ",1]")] + 
-                mcmcMat[, paste0("b1b2b3[", x1Level, ",", x2Level, ",1]")]), 
-           main = paste(levels(questionnaireData$intervention)[x2Level], 
-                        levels(questionnaireData$question)[x1Level], sep = "\n"),
-           compVal = 0.0, ROPE = c(-0.05, 0.05),
-           xlab = "")
+                mcmcMat[, paste0("b1b2b3[", x1Level, ",", x2Level, ",1]")]),
+             main = "",
+             compVal = 0.0, ROPE = c(-0.05, 0.05),
+             xlab = "")
+    
+    # Label the top row with the name of the intervention and the right column
+    # with the question
+    if (x1Level == 1) {
+      mtext(levels(questionnaireData$intervention)[x2Level], side=3, line=1)
+    }
+    if (x2Level == length(levels(questionnaireData$intervention))) {
+      mtext(levels(questionnaireData$question)[x1Level], side=4, line=2)
+    }
   }
 }
 ```
