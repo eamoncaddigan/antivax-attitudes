@@ -408,3 +408,7 @@ A defining characteristic of Bayesian analyses is that prior information about t
 ## Conclusions
 
 Concerns about a possible link between childhood vaccination and autism is causing some parents to skip childhood vaccinations, which is dangerous ([Calandrillo, 2004](http://www.ncbi.nlm.nih.gov/pubmed/15568260)). However, an intervention that exposes people to the consequences of the diseases that vaccinations prevent makes them respond more favorably toward childhood vaccination. A separate group of participants did not change their attitudes after being shown information discrediting the vaccination-autism link, nor did a group of control participants. 
+
+### Acknowledgements
+
+[Zach Horne](http://www.zacharyhorne.com/) made the data available for analysis (by anyone!), and gave useful feedback on an earlier version of this write-up. Much of the code for Bayesian estimation was cobbled together from programs distributed with Doing Bayesian Data Analysis (2nd ed) by [John K. Kruschke](http://www.indiana.edu/~kruschke/).  
