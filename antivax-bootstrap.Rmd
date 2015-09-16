@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Bootstrap analysis of anti-vaccination belief changes"
-summary: Bootstrap analysis of the antivaccination data
+summary: Another way of looking at the antivaccination data of Horne, et al.
 author: "Eamon Caddigan"
 date: 2015-09-15
 categories: psych R
@@ -64,7 +64,10 @@ questionnaireData <- expData.clean %>%
          interval = factor(interval, 
                            c("pretest", "posttest"), ordered = TRUE),
          question = factor(question, 
-                           c("healthy", "diseases", "doctors", "side_effects", "plan_to")))
+                           c("healthy", "diseases", "doctors", "side_effects", "plan_to"))) %>%
+  # Pre- and post-test get their own columns in these analyses
+  mutate(interval = paste0(interval, "_response")) %>%
+  spread(interval, response)
 # -----------------------------------------------------------------------------
 ```
 
@@ -76,26 +79,54 @@ Some of my friends offered insightful comments, and one [pointed out](https://tw
 
 ![Posteror of final score differences](https://pbs.twimg.com/media/COE2e8bUkAEeu8b.png:large)
 
-Still, interpreting differences in parameter values isn't always straightforward, so I thought it'd be fun to try a different approach. Instead of modeling the (process that generated the) data, we can use bootstrapping to estimate population parameters using the sample. [Bootstrapping is cool and simple](https://en.wikipedia.org/wiki/Bootstrapping_(statistics)), and it's one of those great techniques that people would've been using all along had computers been around in the early days of statistics.
+Still, interpreting differences in parameter values isn't always straightforward, so I thought it'd be fun to try a different approach. Instead of modeling the (process that generated the) data, we can use bootstrapping to estimate population parameters using the sample. [Bootstrapping is simple](https://en.wikipedia.org/wiki/Bootstrapping_(statistics)) and is one of those techniques that people would've been using all along had computers been around in the early days of statistics.
 
-```{r }
+The sample mean is already an unbiased estimator of the population mean, so bootstrapping isn't necessary in this first example. However, this provides a simple illustration of how the technique works: draw samples with replacement from your data, calculate a statistic on this new data, and repeat. 
+
+```{r pretest_bootstrap, dependson="setup_data", echo=TRUE}
 # Bootstrap to find the probability that each response will be given to pre-test
 # questions.
-numBootstraps <- 1e5
+numBootstraps <- 1e3
 numObservations <- nrow(questionnaireData)
-numResponseValues <- length(unique(questionnaireData$response))
+uniqueResponses <- paste(sort(unique(questionnaireData$pretest_response)))
 
-preinterventionData <- matrix(data = 0,
-                              nrow = numBootstraps, 
-                              ncol = numResponseValues)
+pretestData <- matrix(data = 0,
+                      nrow = numBootstraps, 
+                      ncol = length(uniqueResponses))
+colnames(pretestData) <- uniqueResponses
+
+# Run the bootstrap
 for (ii in seq_len(numBootstraps)) {
-  bootSamples <- sample(questionnaireData$response, 
+  bootSamples <- sample(questionnaireData$pretest_response, 
                         numObservations, 
                         replace = TRUE)
-  bootTable <- table(bootSamples)
-  preinterventionData[ii, as.integer(names(bootTable))] <- bootTable
+  bootSamplesTabulated <- table(bootSamples)
+  pretestData[ii, names(bootSamplesTabulated)] <- bootSamplesTabulated
 }
-preinterventionData <- preinterventionData / numObservations
 
+# Convert the counts to probabilities
+pretestData <- pretestData / numObservations
 ```
 
+```{r pretest_plot, dependson="pretest_bootstrap", fig.width=4, fig.height=4}
+pretestResults <- data_frame(response = uniqueResponses, 
+                             bootstrap_prob = apply(pretestData, 2, mean),
+                             bootstrap_sd = apply(pretestData, 2, sd),
+                             observed_prob = as.numeric(table(questionnaireData$pretest_response)) / 
+                               numObservations)
+ggplot(pretestResults, aes(x = response)) + 
+  geom_bar(aes(y = observed_prob), stat = "identity", 
+           color="white", fill="skyblue") + 
+  geom_point(aes(y = bootstrap_prob), size=3, color="red") + 
+  geom_errorbar(aes(ymin = bootstrap_prob-bootstrap_sd/2, 
+                    ymax = bootstrap_prob+bootstrap_sd/2),
+                size=2, color="red", width=0) +
+  scale_y_continuous(limits = c(0, 1)) +
+  xlab("Response Level") + 
+  ylab("Proportion") + 
+  theme_classic()
+```
+
+As expected, the bootstrap estimates for the proportion of responses at each level almost exactly match the observed data.
+
+The failure of random assignment meant that the three groups of participants (the control group, the "autism correction" group, and the "disease risk" group) had different distributions of responses to the pre-intervention survey. To mitigate this, we'll estimate the transition probabilities from each response on the pre-intervention survey to each response on the post-intervention survey separately for each group. These are conditional probabilities, e.g., the probability of selecting 4 on a survey question after the intervention given that the participant 
