@@ -1,0 +1,83 @@
+---
+layout: post
+title: "Bootstrap analysis of anti-vaccination belief changes"
+summary: Bootstrap analysis of the antivaccination data
+author: "Eamon Caddigan"
+date: 2015-09-15
+categories: psych R
+output: html_document
+---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(cache=TRUE, echo=FALSE, warning=FALSE, message=FALSE,
+                      fig.width=9, fig.align="center")
+```
+
+```{r setup_data, results="hide"}
+# Required librarys and external files ----------------------------------------
+
+library(readxl)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(gridExtra)
+library(rjags)
+library(runjags)
+source("DBDA2E-utilities.R")
+source("ggPostPlot.R")
+
+# Clean and process the data --------------------------------------------------
+
+# Generates warnings for the Ps who didn't do day 2
+suppressWarnings(expData <- read_excel("Vacc_HPHH_publicDataset.xlsx", sheet = 2))
+
+# Exclude Ps who didn't do day 2 and failed the attention checks
+expData.clean <- expData %>%
+  # It's good to add a subject number so we can go back to original data
+  mutate(subject_number = 1:nrow(.)) %>%
+  filter(Returned == 1,
+         `AttentionCheck_PostTest (if = 4 then include)` == 4,
+         `AttentionChecks_Sum(include if = 4)` == 4,
+         Paid_Attention == 1)
+
+# Get all the dependent measures into a DF
+questionnaireData <- expData.clean %>%
+  # Pull out the columns and use consistent names
+  select(subject_number,
+         intervention = Condition,
+         pretest.healthy = Healthy_VaxscalePretest,
+         posttest.healthy = Healthy_VaxscalePosttest,
+         pretest.diseases = Diseases_VaxScalePretest,
+         posttest.diseases = Diseases_VaxScalePosttest,
+         pretest.doctors = Doctors_VaxScalePreTest,
+         posttest.doctors = Doctors_VaxScalePostTest,
+         pretest.side_effects = Sideeffects_VaxScalePreTest,
+         posttest.side_effects = Sideeffects_VaxScalePostTest,
+         pretest.plan_to = Planto_VaxScalePreTest,
+         posttest.plan_to = Planto_VaxScalePostTest) %>%
+  # Reverse-code the approrpiate columns
+  mutate(pretest.diseases = 7 - pretest.diseases,
+         posttest.diseases = 7 - posttest.diseases,
+         pretest.side_effects = 7 - pretest.side_effects,
+         posttest.side_effects = 7 - posttest.side_effects) %>%
+  # Tidy the data
+  gather("question", "response", -subject_number, -intervention) %>%
+  separate(question, c("interval", "question"), sep = "\\.") %>% 
+  mutate(intervention = factor(intervention, 
+                               c("Control", "Autism Correction", "Disease Risk")),
+         interval = factor(interval, 
+                           c("pretest", "posttest"), ordered = TRUE),
+         question = factor(question, 
+                           c("healthy", "diseases", "doctors", "side_effects", "plan_to")))
+# -----------------------------------------------------------------------------
+```
+
+## Introduction
+
+In a [previous post]({{ site.url }}/psych/bayes/2015/09/03/antivax-attitudes/) (I don't know why I'm linking it since there are only two), I presented an analysis of data by ([Horne, Powell, Hummel & Holyoak, 2015](http://www.pnas.org/content/112/33/10321.abstract)) showing changes in antivaccination attitudes. This previous analysis used Bayesian estimation to show a credible increase in pro-vaccination attitudes following a "disease risk" intervention, but not an "autism correction" intervention.
+
+Some of my friends offered insightful comments, and one [pointed out](https://twitter.com/johnclevenger/status/639795727439429632) that there appeared to be a failure of random assignment. Participants in the "disease risk" group happened to have lower scores on the survey and therefore had more room for improvement. This is a fair criticism, but I found that post-intervention scores alone were higher for the "disease risk" group, which addresses this problem. 
+
+![Posteror of final score differences](https://pbs.twimg.com/media/COE2e8bUkAEeu8b.png:large)
+
+Still, interpreting differences in parameter values isn't always straightforward, so I thought it'd be fun to try a different approach. Instead of modeling the (process that generated the) data, we can use bootstrapping to estimate population parameters using the sample. [Bootstrapping is cool and simple](https://en.wikipedia.org/wiki/Bootstrapping_(statistics)), and it's one of those great techniques that people would've been using all along had computers been around in the early days of statistics. 
