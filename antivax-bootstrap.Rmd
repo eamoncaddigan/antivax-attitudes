@@ -79,9 +79,11 @@ Some of my friends offered insightful comments, and one [pointed out](https://tw
 
 ![Posteror of final score differences](https://pbs.twimg.com/media/COE2e8bUkAEeu8b.png:large)
 
-Still, interpreting differences in parameter values isn't always straightforward, so I thought it'd be fun to try a different approach. Instead of modeling the (process that generated the) data, we can use bootstrapping to estimate population parameters using the sample. [Bootstrapping is simple](https://en.wikipedia.org/wiki/Bootstrapping_(statistics)) and is one of those techniques that people would've been using all along had computers been around in the early days of statistics.
+# Bootstrapping 
 
-The sample mean is already an unbiased estimator of the population mean, so bootstrapping isn't necessary in this first example. However, this provides a simple illustration of how the technique works: draw samples with replacement from your data, calculate a statistic on this new data, and repeat. 
+Interpreting differences in parameter values isn't always straightforward, so I thought it'd be worthwhile to try a different approach. Instead fitting a generative model to the sampled data, we can use bootstrapping on the sample to estimate population parameters. [Bootstrapping](https://en.wikipedia.org/wiki/Bootstrapping_(statistics)) is conceptually simple; I feel it would have much wider adoption today had computers been around in the early days of statistics.
+
+Here is code that uses bootstrapping to estimate the probability of each response on the pre-intervention survey (irrespective of question on intervention group assignment). The sample mean is already an unbiased estimator of the population mean, so bootstrapping isn't necessary in this first example. However, this provides a simple illustration of how the technique works: sample observations *with replacement* from the observed data, calculate a statistic on this new data, and repeat. 
 
 ```{r setup_bootstrap, dependson="setup_data", echo=TRUE}
 numBootstraps <- 1e3  # Should be a big number
@@ -117,11 +119,11 @@ pretestData <- pretestData / numObservations
 ```
 
 ```{r pretest_plot, dependson="pretest_bootstrap", fig.width=4, fig.height=4}
-pretestResults <- data_frame(response = uniqueResponses, 
+pretestDF <- data_frame(response = uniqueResponses, 
                              bootstrap_prob = apply(pretestData, 2, mean),
                              bootstrap_sd = apply(pretestData, 2, sd),
                              observed_prob = obsPretestResponseProbabilities)
-ggplot(pretestResults, aes(x = response)) + 
+ggplot(pretestDF, aes(x = response)) + 
   geom_bar(aes(y = observed_prob), stat = "identity", 
            color="white", fill="skyblue") + 
   geom_point(aes(y = bootstrap_prob), size=3, color="red") + 
@@ -137,7 +139,9 @@ ggplot(pretestResults, aes(x = response)) +
 
 As expected, the bootstrap estimates for the proportion of responses at each level almost exactly match the observed data.
 
-The failure of random assignment meant that the three groups of participants (the control group, the "autism correction" group, and the "disease risk" group) had different distributions of responses to the pre-intervention survey. To mitigate this, we'll estimate the transition probabilities from each response on the pre-intervention survey to each response on the post-intervention survey separately for each group. These are conditional probabilities, e.g., the probability of selecting 4 on a survey question after the intervention given that the participant answered 3 originally. Using these conditional probabilities, joint probabilities (e.g. probability of selecting 4 on the survey post-intervention AND 3 on the survey pre-intervention) are calculated using pre-intervention probabilities that are agnostic to group assignment. 
+## Changes in vaccination attitudes
+
+Due to chance alone, the three groups of participants (the control group, the "autism correction" group, and the "disease risk" group) had different patterns of responses to the pre-intervention survey. To mitigate this, the code below estimates the transition probabilities from each response on the pre-intervention survey to each response on the post-intervention survey, and does so separately for each group. These are conditional probabilities, e.g., P(post-intervention rating = 4 | pre-intervention rating = 3). These conditional probabilities are then combined with the observed pre-intervention response probabilities to calculate the joint probability of each response transition (e.g., P(post-intervention rating = 4 AND pre-intervention rating = 3)). Since the prior is agnostic to subjects' group assignment, these joint probability estimates are free from any biases due to a failure of random assignment.
 
 ```{r posttest_bootstrap, dependson="setup_bootstrap", echo=TRUE}
 
@@ -185,7 +189,7 @@ for (pretestResponse in seq_along(uniqueResponses)) {
 }
 ```
 
-With the transition probabilities appropriately modeled, it's now easy to answer the question: "are participants in the 'disease risk' group more likely to respond with a more-pro-vaccine attitude after the intervention than participants in the other groups?" We'll use the previously-run bootstraps to compute the probability of *increased* scores separately for each group.
+With the transition probabilities appropriately modeled, it's possible to test the hypothesis: **"participants in the 'disease risk' group are more likely to respond with a more-pro-vaccine attitude after the intervention than participants in the other groups."** We'll use the previously-run bootstraps to compute the probability of increased scores separately for each group.
 
 ```{r posttest_shifts, dependson="posttest_bootstrap", echo=TRUE}
 posttestIncrease <- matrix(data = 0, 
@@ -203,12 +207,17 @@ for (interventionLevel in seq_along(interventionLevels)) {
     }
   }
 }
+```
 
-# Calculate the probability that disease risk is greater than autism correction
+This estimates the probability that "disease risk" samples have a greater probability of making higher post-intervention responses than "autism correction" sample 
+
+```{r posttest_stat, dependson="posttest_shifts", echo=TRUE}
 sum(posttestIncrease[, which(interventionLevels == "Disease Risk")] > 
       posttestIncrease[, which(interventionLevels == "Autism Correction")]) / 
   nrow(posttestIncrease)
 ```
+
+Below is a visualization of the bootstrapped distributions of the probabilities of increased post-intervention responses. 
 
 ```{r posttest_plot, dependson="posttest_shifts"}
 posttestDF <- gather(as.data.frame(posttestIncrease), "intervention", "prob_increase")
@@ -217,3 +226,7 @@ ggplot(posttestDF, aes(x = prob_increase, fill = intervention)) +
   ylab("Samples") + xlab("Probability of rating increase") + 
   theme_minimal()
 ```
+
+## Conclusion
+
+Bootstrapping shows that the "disease risk" group is more likely than other groups to have an increase in pro-vaccination attitudes following the intervention. This analysis collapses across the five survey questions used by Horne and colleagues, although it would be straightforward to extend this approach to estimate attitude changes separately for each question. 
