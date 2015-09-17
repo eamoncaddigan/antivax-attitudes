@@ -136,22 +136,50 @@ ggplot(pretestResults, aes(x = response)) +
 
 As expected, the bootstrap estimates for the proportion of responses at each level almost exactly match the observed data.
 
-The failure of random assignment meant that the three groups of participants (the control group, the "autism correction" group, and the "disease risk" group) had different distributions of responses to the pre-intervention survey. To mitigate this, we'll estimate the transition probabilities from each response on the pre-intervention survey to each response on the post-intervention survey separately for each group. These are conditional probabilities, e.g., the probability of selecting 4 on a survey question after the intervention given that the participant answered 3 originally. 
+The failure of random assignment meant that the three groups of participants (the control group, the "autism correction" group, and the "disease risk" group) had different distributions of responses to the pre-intervention survey. To mitigate this, we'll estimate the transition probabilities from each response on the pre-intervention survey to each response on the post-intervention survey separately for each group. These are conditional probabilities, e.g., the probability of selecting 4 on a survey question after the intervention given that the participant answered 3 originally. Using these conditional probabilities, joint probabilities (e.g. probability of selecting 4 on the survey post-intervention AND 3 on the survey pre-intervention) are calculated using pre-intervention probabilities that are agnostic to group assignment. 
 
 ```{r posttest_bootstrap, dependson="setup_bootstrap", echo=TRUE}
 
-# I haven't decided whether to store this in a multidimensional array, or use more storage and use a data.frame. :/
+# preintervention responses x intervention groups x bootstraps x postintervention responses
 posttestData <- array(data = 0,
-                      dim = c(length(levels(questionnaireData$intervention)),
-                              length(uniqueResponses)
+                      dim = c(length(uniqueResponses),
+                              length(levels(questionnaireData$intervention)),
                               numBootstraps, 
                               length(uniqueResponses)),
-                      dimnames = list(levels(questionnaireData$intervention),
+                      dimnames = list(paste(uniqueResponses),
+                                      levels(questionnaireData$intervention),
                                       NULL,
-                                      NULL,
-                                      NULL,
-                                      NULL))
-# for (ii in seq_len(numBootstraps)) {
-#   
-# }
+                                      paste(uniqueResponses)))
+
+for (pretestResponse in seq_along(uniqueResponses)) {
+  for (interventionLevel in seq_along(levels(questionnaireData$intervention))) {
+    # Get the subset of data for each combination of intervention and
+    # pre-intervention response level.
+    questionnaireDataSubset <- filter(questionnaireData,
+                                      intervention == levels(questionnaireData$intervention)[interventionLevel],
+                                      pretest_response == pretestResponse)
+    numObservationsSubset <- nrow(questionnaireDataSubset)
+    
+    # Run the bootstrap
+    for (ii in seq_len(numBootstraps)) {
+      bootSamples <- sample(questionnaireDataSubset$posttest_response, 
+                            numObservationsSubset, 
+                            replace = TRUE)
+      bootSamplesTabulated <- table(bootSamples)
+      posttestData[pretestResponse, 
+                   interventionLevel, 
+                   ii, 
+                   names(bootSamplesTabulated)] <- bootSamplesTabulated
+    }
+    
+    # Convert the counts to probabilities
+    posttestData[pretestResponse, interventionLevel, , ] <- 
+      posttestData[pretestResponse, interventionLevel, , ] / numObservationsSubset
+  }
+  
+  # Convert the conditional probabilities to joint probabilities using the 
+  # observed priors on each pretest response.
+  posttestData[pretestResponse, , , ] <- posttestData[pretestResponse, , , ] *
+    obsPretestResponseProbabilities[pretestResponse]
+}
 ```
