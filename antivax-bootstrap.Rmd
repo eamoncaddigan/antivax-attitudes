@@ -73,17 +73,17 @@ questionnaireData <- expData.clean %>%
 
 ## Introduction
 
-In a [previous post]({{ site.url }}/psych/bayes/2015/09/03/antivax-attitudes/) (I don't know why I'm linking it since there are only two), I presented an analysis of data by ([Horne, Powell, Hummel & Holyoak, 2015](http://www.pnas.org/content/112/33/10321.abstract)) showing changes in antivaccination attitudes. This previous analysis used Bayesian estimation to show a credible increase in pro-vaccination attitudes following a "disease risk" intervention, but not an "autism correction" intervention.
+In a [previous post]({{ site.url }}/psych/bayes/2015/09/03/antivax-attitudes/) (I don't know why I'm linking it -- there are only two), I presented an analysis of data by [Horne, Powell, Hummel & Holyoak, (2015)](http://www.pnas.org/content/112/33/10321.abstract) that investigated changes in attitudes toward childhood vaccinations. The previous analysis used Bayesian estimation to show a credible increase in pro-vaccination attitudes following a "disease risk" intervention, but not an "autism correction" intervention.
 
-Some of my friends offered insightful comments, and one [pointed out](https://twitter.com/johnclevenger/status/639795727439429632) that there appeared to be a failure of random assignment. Participants in the "disease risk" group happened to have lower scores on the survey and therefore had more room for improvement. This is a fair criticism, but I found that post-intervention scores alone were higher for the "disease risk" group, which addresses this problem. 
+Some of my friends offered insightful comments, and one [pointed out](https://twitter.com/johnclevenger/status/639795727439429632) what appeared to be a failure of random assignment. Participants in the "disease risk" group happened to have lower scores on the pre-intervention survey and therefore had more room for improvement. This is a fair criticism, but a subsequent analysis showed that post-intervention scores were also higher for the "disease risk" group, which addresses this issue.
 
 ![Posteror of final score differences](bayesian_ending_scores.png)
 
 ### Bootstrapping 
 
-Interpreting differences in parameter values isn't always straightforward, so I thought it'd be worthwhile to try a different approach. Instead fitting a generative model to the sample, we can use bootstrapping to estimate the unobserved population parameters. [Bootstrapping](https://en.wikipedia.org/wiki/Bootstrapping_(statistics)) is conceptually simple; I feel it would have much wider adoption today had computers been around in the early days of statistics.
+Interpreting differences in parameter values isn't always straightforward, so I thought it'd be worthwhile to try a different approach. Instead of fitting a generative model to the sample, we can use bootstrapping to estimate the unobserved population parameters. [Bootstrapping](https://en.wikipedia.org/wiki/Bootstrapping_(statistics)) is conceptually simple; I feel it would have much wider adoption today had computers been around in the early days of statistics.
 
-Here is code that uses bootstrapping to estimate the probability of each response on the pre-intervention survey (irrespective of survey question or intervention group assignment). The sample mean is already an unbiased estimator of the population mean, so bootstrapping isn't necessary in this first example. However, this provides a simple illustration of how the technique works: sample observations *with replacement* from the data, calculate a statistic on this new data, and repeat. 
+Here is code that uses bootstrapping to estimate the probability of each response on the pre-intervention survey (irrespective of survey question or intervention group assignment). The sample mean is already an unbiased estimator of the population mean, so bootstrapping isn't necessary in this first example. However, this provides a simple illustration of how the technique works: sample observations *with replacement* from the data, calculate a statistic on this new data, and repeat. The mean of the observed statistic values provides an estimate of the population statistic, and the distribution of statistic values provides a measure of certainty. 
 
 ```{r setup_bootstrap, dependson="setup_data", echo=TRUE}
 numBootstraps <- 1e3  # Should be a big number
@@ -127,10 +127,10 @@ pretestDF <- data_frame(response = uniqueResponses,
 ggplot(pretestDF, aes(x = response)) + 
   geom_bar(aes(y = observed_prob), stat = "identity", 
            color="white", fill="skyblue") + 
-  geom_point(aes(y = bootstrap_prob), size=3, color="red") + 
-  geom_errorbar(aes(ymin = bootstrap_prob-bootstrap_sd/2, 
-                    ymax = bootstrap_prob+bootstrap_sd/2),
-                size=2, color="red", width=0) +
+  geom_point(aes(y = bootstrap_prob), size = 3, color = "red") + 
+  geom_errorbar(aes(ymin = bootstrap_prob - bootstrap_sd/2, 
+                    ymax = bootstrap_prob + bootstrap_sd/2),
+                size = 2, color = "red", width = 0) +
   scale_x_continuous(breaks = 1:length(uniqueResponses)) +
   scale_y_continuous(limits = c(0, 1)) +
   xlab("Response Level") + 
@@ -138,13 +138,13 @@ ggplot(pretestDF, aes(x = response)) +
   theme_classic()
 ```
 
-As expected, the bootstrap estimates for the proportion of responses at each level almost exactly match the observed data. There are supposed to be errorbars around the points (bootstrap estimates), but they're obscured by the points themselves.
+As expected, the bootstrap estimates for the proportion of responses at each level almost exactly match the observed data. There are supposed to be errorbars around the points, which show the bootstrap estimates, but they're obscured by the points themselves.
 
 ## Changes in vaccination attitudes
 
-Due to chance alone, the three groups of participants (the control group, the "autism correction" group, and the "disease risk" group) had different patterns of responses to the pre-intervention survey. To mitigate this, the code below estimates the transition probabilities from each response on the pre-intervention survey to each response on the post-intervention survey, and does so separately for each group. These are conditional probabilities, e.g., P(post-intervention rating = 4 | pre-intervention rating = 3). 
+Due to chance alone, the three groups of participants (the control group, the "autism correction" group, and the "disease risk" group) showed different patterns of responses to the pre-intervention survey. To mitigate this issue, the code below estimates the transition probabilities from each response on the pre-intervention survey to each response on the post-intervention survey, and does so separately for the groups. These are conditional probabilities, e.g., P(post-intervention rating = 4 | pre-intervention rating = 3). 
 
-The conditional probabilities are then combined with the observed pre-intervention response probabilities to calculate the joint probability of each response transition (e.g., P(post-intervention rating = 4 AND pre-intervention rating = 3)). Importantly, since the prior is agnostic to subjects' group assignment, these joint probability estimates are free from biases that would follow from a failure of random assignment.
+The conditional probabilities are then combined with the observed pre-intervention response probabilities to calculate the joint probability of each response transition (e.g., P(post-intervention rating = 4 AND pre-intervention rating = 3)). Importantly, since the prior is agnostic to subjects' group assignment, these joint probability estimates are less-affected by biases that would follow from a failure of random assignment.
 
 ```{r posttest_bootstrap, dependson="setup_bootstrap", echo=TRUE}
 # preintervention responses x intervention groups x bootstraps x postintervention responses
@@ -191,7 +191,7 @@ for (pretestResponse in seq_along(uniqueResponses)) {
 }
 ```
 
-With the transition probabilities estimated, it's possible to test the hypothesis: **"participants are more likely to shift toward a more pro-vaccine attitude following a 'disease risk' intervention than participants in control and 'autism correction' groups."** We'll use the previously-run bootstraps to compute the probability of increased scores separately for each group.
+With the transition probabilities sampled, it's possible to test the hypothesis: **"participants are more likely to shift toward a more pro-vaccine attitude following a 'disease risk' intervention than participants in control and 'autism correction' groups."** We'll use the previously-run bootstrap samples to compute the each group's probability of increasing scores.
 
 ```{r posttest_shifts, dependson="posttest_bootstrap", echo=TRUE}
 posttestIncrease <- array(data = 0, 
@@ -233,4 +233,6 @@ ggplot(posttestDF, aes(x = prob_increase, fill = intervention)) +
 
 ## Conclusion
 
-Bootstrapping shows that the "disease risk" group is more likely than other groups to have an increase in pro-vaccination attitudes following the intervention. This analysis collapses across the five survey questions used by Horne and colleagues, although it would be straightforward to extend this approach to estimate attitude change probabilities separately for each question. 
+Bootstrapping shows that a "disease risk" intervention is more likely than others to increase participants' pro-vaccination attitudes. This analysis collapses across the five survey questions used by Horne and colleagues, but it would be straightforward to extend this code to estimate attitude change probabilities separately for each question. 
+
+Although there are benefits to analyzing data with nonparametric methods, the biggest shortcoming of the approach I've used here is that it can not estimate the size of the attitude changes. Instead, it estimates that probability of pro-vaccination attitude changes occuring, and the difference in these probabilities between the groups. This is a great example of why it's important to keep your question in mind while analyzing data. 
