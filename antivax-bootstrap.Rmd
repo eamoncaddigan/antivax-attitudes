@@ -83,17 +83,24 @@ Still, interpreting differences in parameter values isn't always straightforward
 
 The sample mean is already an unbiased estimator of the population mean, so bootstrapping isn't necessary in this first example. However, this provides a simple illustration of how the technique works: draw samples with replacement from your data, calculate a statistic on this new data, and repeat. 
 
-```{r pretest_bootstrap, dependson="setup_data", echo=TRUE}
+```{r setup_bootstrap, dependson="setup_data", echo=TRUE}
+numBootstraps <- 1e3  # Should be a big number
+numObservations <- nrow(questionnaireData)
+uniqueResponses <- sort(unique(questionnaireData$pretest_response))
+
+# The observed proportion of responses at each level
+obsPretestResponseProbabilities <- as.numeric(table(questionnaireData$pretest_response)) / 
+  numObservations
+```
+
+```{r pretest_bootstrap, dependson="setup_bootstrap", echo=TRUE}
 # Bootstrap to find the probability that each response will be given to pre-test
 # questions.
-numBootstraps <- 1e3
-numObservations <- nrow(questionnaireData)
-uniqueResponses <- paste(sort(unique(questionnaireData$pretest_response)))
 
 pretestData <- matrix(data = 0,
                       nrow = numBootstraps, 
                       ncol = length(uniqueResponses))
-colnames(pretestData) <- uniqueResponses
+colnames(pretestData) <- paste(uniqueResponses)
 
 # Run the bootstrap
 for (ii in seq_len(numBootstraps)) {
@@ -112,8 +119,7 @@ pretestData <- pretestData / numObservations
 pretestResults <- data_frame(response = uniqueResponses, 
                              bootstrap_prob = apply(pretestData, 2, mean),
                              bootstrap_sd = apply(pretestData, 2, sd),
-                             observed_prob = as.numeric(table(questionnaireData$pretest_response)) / 
-                               numObservations)
+                             observed_prob = obsPretestResponseProbabilities)
 ggplot(pretestResults, aes(x = response)) + 
   geom_bar(aes(y = observed_prob), stat = "identity", 
            color="white", fill="skyblue") + 
@@ -121,6 +127,7 @@ ggplot(pretestResults, aes(x = response)) +
   geom_errorbar(aes(ymin = bootstrap_prob-bootstrap_sd/2, 
                     ymax = bootstrap_prob+bootstrap_sd/2),
                 size=2, color="red", width=0) +
+  scale_x_continuous(breaks = 1:length(uniqueResponses)) +
   scale_y_continuous(limits = c(0, 1)) +
   xlab("Response Level") + 
   ylab("Proportion") + 
@@ -129,4 +136,22 @@ ggplot(pretestResults, aes(x = response)) +
 
 As expected, the bootstrap estimates for the proportion of responses at each level almost exactly match the observed data.
 
-The failure of random assignment meant that the three groups of participants (the control group, the "autism correction" group, and the "disease risk" group) had different distributions of responses to the pre-intervention survey. To mitigate this, we'll estimate the transition probabilities from each response on the pre-intervention survey to each response on the post-intervention survey separately for each group. These are conditional probabilities, e.g., the probability of selecting 4 on a survey question after the intervention given that the participant 
+The failure of random assignment meant that the three groups of participants (the control group, the "autism correction" group, and the "disease risk" group) had different distributions of responses to the pre-intervention survey. To mitigate this, we'll estimate the transition probabilities from each response on the pre-intervention survey to each response on the post-intervention survey separately for each group. These are conditional probabilities, e.g., the probability of selecting 4 on a survey question after the intervention given that the participant answered 3 originally. 
+
+```{r posttest_bootstrap, dependson="setup_bootstrap", echo=TRUE}
+
+# I haven't decided whether to store this in a multidimensional array, or use more storage and use a data.frame. :/
+posttestData <- array(data = 0,
+                      dim = c(length(levels(questionnaireData$intervention)),
+                              length(uniqueResponses)
+                              numBootstraps, 
+                              length(uniqueResponses)),
+                      dimnames = list(levels(questionnaireData$intervention),
+                                      NULL,
+                                      NULL,
+                                      NULL,
+                                      NULL))
+# for (ii in seq_len(numBootstraps)) {
+#   
+# }
+```
