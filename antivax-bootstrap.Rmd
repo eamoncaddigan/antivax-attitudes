@@ -77,7 +77,7 @@ In a [previous post]({{ site.url }}/psych/bayes/2015/09/03/antivax-attitudes/) (
 
 Some of my friends offered insightful comments, and one [pointed out](https://twitter.com/johnclevenger/status/639795727439429632) what appeared to be a failure of random assignment. Participants in the "disease risk" group happened to have lower scores on the pre-intervention survey and therefore had more room for improvement. This is a fair criticism, but a subsequent analysis showed that post-intervention scores were also higher for the "disease risk" group, which addresses this issue.
 
-![Posteror of final score differences](bayesian_ending_scores.png)
+![Posterior of final score differences](bayesian_ending_scores.png)
 
 ### Bootstrapping 
 
@@ -86,7 +86,7 @@ Interpreting differences in parameter values isn't always straightforward, so I 
 Here is code that uses bootstrapping to estimate the probability of each response on the pre-intervention survey (irrespective of survey question or intervention group assignment). The sample mean is already an unbiased estimator of the population mean, so bootstrapping isn't necessary in this first example. However, this provides a simple illustration of how the technique works: sample observations *with replacement* from the data, calculate a statistic on this new data, and repeat. The mean of the observed statistic values provides an estimate of the population statistic, and the distribution of statistic values provides a measure of certainty. 
 
 ```{r setup_bootstrap, dependson="setup_data", echo=TRUE}
-numBootstraps <- 1e3  # Should be a big number
+numBootstraps <- 1e5  # Should be a big number
 numObservations <- nrow(questionnaireData)
 uniqueResponses <- sort(unique(questionnaireData$pretest_response))
 interventionLevels <- levels(questionnaireData$intervention)
@@ -138,7 +138,7 @@ ggplot(pretestDF, aes(x = response)) +
   theme_classic()
 ```
 
-As expected, the bootstrap estimates for the proportion of responses at each level almost exactly match the observed data. There are supposed to be errorbars around the points, which show the bootstrap estimates, but they're obscured by the points themselves.
+As expected, the bootstrap estimates for the proportion of responses at each level almost exactly match the observed data. There are supposed to be error-bars around the points, which show the bootstrap estimates, but they're obscured by the points themselves.
 
 ## Changes in vaccination attitudes
 
@@ -220,7 +220,7 @@ sum(posttestIncrease[, which(interventionLevels == "Disease Risk")] >
   nrow(posttestIncrease)
 ```
 
-Below is a visualization of the bootstrapped distributions of the probabilities of increased post-intervention responses. 
+Below is a visualization of the bootstrap distributions. This illustrates the certainty of the estimates of the probability  that participants would express stronger pro-vaccination attitudes after the interventions. 
 
 ```{r posttest_plot, dependson="posttest_shifts"}
 posttestDF <- gather(as.data.frame(posttestIncrease), "intervention", "prob_increase")
@@ -233,6 +233,6 @@ ggplot(posttestDF, aes(x = prob_increase, fill = intervention)) +
 
 ## Conclusion
 
-Bootstrapping shows that a "disease risk" intervention is more likely than others to increase participants' pro-vaccination attitudes. This analysis collapses across the five survey questions used by Horne and colleagues, but it would be straightforward to extend this code to estimate attitude change probabilities separately for each question. 
+Bootstrapping shows that a "disease risk" intervention has a stronger effect than others in shifting participants' pro-vaccination attitudes. This analysis collapses across the five survey questions used by Horne and colleagues, but it would be straightforward to extend this code to estimate attitude change probabilities separately for each question. 
 
-Although there are benefits to analyzing data with nonparametric methods, the biggest shortcoming of the approach I've used here is that it can not estimate the size of the attitude changes. Instead, it estimates that probability of pro-vaccination attitude changes occuring, and the difference in these probabilities between the groups. This is a great example of why it's important to keep your question in mind while analyzing data. 
+Although there are benefits to analyzing data with nonparametric methods, the biggest shortcoming of the approach I've used here is that it can not estimate the size of the attitude changes. Instead, it estimates that probability of pro-vaccination attitude changes occurring, and the difference in these probabilities between the groups. This is a great example of why it's important to keep your question in mind while analyzing data. 
