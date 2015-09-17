@@ -87,6 +87,7 @@ The sample mean is already an unbiased estimator of the population mean, so boot
 numBootstraps <- 1e3  # Should be a big number
 numObservations <- nrow(questionnaireData)
 uniqueResponses <- sort(unique(questionnaireData$pretest_response))
+interventionLevels <- levels(questionnaireData$intervention)
 
 # The observed proportion of responses at each level
 obsPretestResponseProbabilities <- as.numeric(table(questionnaireData$pretest_response)) / 
@@ -143,20 +144,20 @@ The failure of random assignment meant that the three groups of participants (th
 # preintervention responses x intervention groups x bootstraps x postintervention responses
 posttestData <- array(data = 0,
                       dim = c(length(uniqueResponses),
-                              length(levels(questionnaireData$intervention)),
+                              length(interventionLevels),
                               numBootstraps, 
                               length(uniqueResponses)),
                       dimnames = list(paste(uniqueResponses),
-                                      levels(questionnaireData$intervention),
+                                      interventionLevels,
                                       NULL,
                                       paste(uniqueResponses)))
 
 for (pretestResponse in seq_along(uniqueResponses)) {
-  for (interventionLevel in seq_along(levels(questionnaireData$intervention))) {
+  for (interventionLevel in seq_along(interventionLevels)) {
     # Get the subset of data for each combination of intervention and
     # pre-intervention response level.
     questionnaireDataSubset <- filter(questionnaireData,
-                                      intervention == levels(questionnaireData$intervention)[interventionLevel],
+                                      intervention == interventionLevels[interventionLevel],
                                       pretest_response == pretestResponse)
     numObservationsSubset <- nrow(questionnaireDataSubset)
     
@@ -182,4 +183,37 @@ for (pretestResponse in seq_along(uniqueResponses)) {
   posttestData[pretestResponse, , , ] <- posttestData[pretestResponse, , , ] *
     obsPretestResponseProbabilities[pretestResponse]
 }
+```
+
+With the transition probabilities appropriately modeled, it's now easy to answer the question: "are participants in the 'disease risk' group more likely to respond with a more-pro-vaccine attitude after the intervention than participants in the other groups?" We'll use the previously-run bootstraps to compute the probability of *increased* scores separately for each group.
+
+```{r posttest_shifts, dependson="posttest_bootstrap", echo=TRUE}
+posttestIncrease <- matrix(data = 0, 
+                           nrow = numBootstraps,
+                           ncol = length(interventionLevels))
+colnames(posttestIncrease) <- interventionLevels
+
+for (interventionLevel in seq_along(interventionLevels)) {
+  for (pretestResponse in seq_along(uniqueResponses)) {
+    for (posttestResponse in seq_along(uniqueResponses)) {
+      if (posttestResponse > pretestResponse) {
+        posttestIncrease[, interventionLevel] <- posttestIncrease[, interventionLevel] +
+          posttestData[pretestResponse, interventionLevel, , posttestResponse]
+      }
+    }
+  }
+}
+
+# Calculate the probability that disease risk is greater than autism correction
+sum(posttestIncrease[, which(interventionLevels == "Disease Risk")] > 
+      posttestIncrease[, which(interventionLevels == "Autism Correction")]) / 
+  nrow(posttestIncrease)
+```
+
+```{r posttest_plot, dependson="posttest_shifts"}
+posttestDF <- gather(as.data.frame(posttestIncrease), "intervention", "prob_increase")
+ggplot(posttestDF, aes(x = prob_increase, fill = intervention)) + 
+  geom_density(alpha = 0.6) + 
+  ylab("Samples") + xlab("Probability of rating increase") + 
+  theme_minimal()
 ```
