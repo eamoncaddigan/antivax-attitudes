@@ -77,7 +77,7 @@ In a [previous post]({{ site.url }}/psych/bayes/2015/09/03/antivax-attitudes/) (
 
 Some of my friends offered insightful comments, and one [pointed out](https://twitter.com/johnclevenger/status/639795727439429632) that there appeared to be a failure of random assignment. Participants in the "disease risk" group happened to have lower scores on the survey and therefore had more room for improvement. This is a fair criticism, but I found that post-intervention scores alone were higher for the "disease risk" group, which addresses this problem. 
 
-![Posteror of final score differences](https://pbs.twimg.com/media/COE2e8bUkAEeu8b.png:large)
+![Posteror of final score differences](bayesian_ending_scores.png)
 
 ### Bootstrapping 
 
@@ -138,7 +138,7 @@ ggplot(pretestDF, aes(x = response)) +
   theme_classic()
 ```
 
-As expected, the bootstrap estimates for the proportion of responses at each level almost exactly match the observed data.
+As expected, the bootstrap estimates for the proportion of responses at each level almost exactly match the observed data. There are supposed to be errorbars around the points (bootstrap estimates), but they're obscured by the points themselves.
 
 ## Changes in vaccination attitudes
 
@@ -191,7 +191,7 @@ for (pretestResponse in seq_along(uniqueResponses)) {
 }
 ```
 
-With the transition probabilities estimated, it's possible to test the hypothesis: **"participants in the 'disease risk' group are more likely to have a more pro-vaccine attitude after the intervention than participants in the other groups."** We'll use the previously-run bootstraps to compute the probability of increased scores separately for each group.
+With the transition probabilities estimated, it's possible to test the hypothesis: **"participants are more likely to shift toward a more pro-vaccine attitude following a 'disease risk' intervention than participants in control and 'autism correction' groups."** We'll use the previously-run bootstraps to compute the probability of increased scores separately for each group.
 
 ```{r posttest_shifts, dependson="posttest_bootstrap", echo=TRUE}
 posttestIncrease <- array(data = 0, 
