@@ -1,7 +1,10 @@
-# Worried about failures of random assignment. Let's check differences in FINAL
-# scores, instead of differences in CHANGES.
+# Worried about failures of random assignment. Let's check differences in FINAL 
+# scores, instead of differences in CHANGES. 
+# 
+# This assumes that all the chunks from antivax-attitudes.Rmd had been run in
+# the current environment.
 
-png(file="ending_scores.png", width=800, height=600)
+png(file="bayesian_ending_scores.png", width=900, height=300)
 par(mfrow = c(1, 3), mar=c(2, 1, 1, 1), oma=c(0, 0, 4, 0))
 
 # We'll look at all the pairs of levels for x2. Easy for three levels, but this
