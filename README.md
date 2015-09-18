@@ -3,13 +3,12 @@ Data from Horne, Powell, Hummel &amp; Holyoak (2015). doi: 10.1073/pnas.15040191
 
 ***
 
-Currently using Bayesian Estimation and a hierarchical model of all output measures in a manner that avoids the need to correct for multiple comparisons.
+I wrote two blog posts about this. 
 
-### TODO:
+First, I used Bayesian estimation to estimate the size of the attitude shifts. You can read that [over here](http://eamoncaddigan.net/psych/bayes/2015/09/03/antivax-attitudes/).
 
-- [x] Model individual questions
-- [x] Add factors for intervention and interval plus interactions
-- [x] Explore the full model with all interactions. Important stuff already replicated but this would allow me to look at the effects on each question.
-- [x] Write up results and post online
+Next, I did a followup where I explored how bootstrapping could be used to compare the interventions. This one is [here](http://eamoncaddigan.net/psych/r/2015/09/17/antivax-bootstrap/).
 
-[Online!](http://eamoncaddigan.net/psych/bayes/2015/09/03/antivax-attitudes/)
+***
+
+I *think* that's it for these data from me. Since this was my first time really diving into survey results I expect that I'll recycle code later. Please e-mail me if you have questions, or just to let me know if  you've found any of this useful!
